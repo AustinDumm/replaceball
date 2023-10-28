@@ -1,0 +1,22 @@
+[package]
+name = "replaceball_echo"
+version = "0.1.0"
+edition = "2021"
+publish.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.5"
+rand_distr = "0.4.3"
+itertools = "0.11.0"
+Inflector = "0.11.4"
+
+[dependencies.clap]
+version = "4.4.6"
+features = ["derive"]
+
+[dependencies.replaceball_sim]
+registry = "local-registry"
+# version = "0.4.0"
+path = "../replaceball_sim/"

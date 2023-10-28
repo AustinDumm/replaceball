@@ -1,0 +1,5 @@
+[registries]
+local-registry = { index = "http://127.0.0.1:50265/git" }
+
+[net]
+git-fetch-with-cli = true
