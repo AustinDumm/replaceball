@@ -13,12 +13,18 @@ use crossterm::{
     terminal::{
         self,
         EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+        LeaveAlternateScreen, BeginSynchronizedUpdate, EndSynchronizedUpdate, Clear, ClearType,
+    }, cursor::{MoveTo, MoveDown, SavePosition, RestorePosition, MoveToColumn, Hide, Show},
 };
 
 pub struct DisplayModel {
+    pub score: Score,
     pub at_bat: AtBat,
+}
+
+pub struct Score {
+    pub home: u16,
+    pub away: u16,
 }
 
 pub struct AtBat {
@@ -31,6 +37,11 @@ pub struct AtBat {
 
 pub struct Display<Out: Write + Send> {
     out: Out,
+}
+
+struct Rect {
+    width: u16,
+    height: u16,
 }
 
 type Error = std::io::Error;
@@ -70,20 +81,103 @@ impl<Out: Write + Send + 'static> Display<Out> {
         terminal::enable_raw_mode()?;
         crossterm::execute!(
             self.out,
-            EnterAlternateScreen
+            EnterAlternateScreen,
+            Hide,
         )
     }
 
     fn cleanup(&mut self) -> Result<()> {
         crossterm::execute!(
             self.out,
-            LeaveAlternateScreen
+            LeaveAlternateScreen,
+            Show,
         )?;
         terminal::disable_raw_mode()
     }
 
     fn show(&mut self, model: DisplayModel) -> Result<()> {
-        Err(Error::new(std::io::ErrorKind::Other, "Not yet implemented"))
+        crossterm::queue!(
+            self.out,
+            BeginSynchronizedUpdate,
+            Clear(ClearType::All),
+            MoveTo(0, 0),
+            SavePosition,
+        )?;
+
+        let score_size = self.enqueue_score(&model.score)?;
+
+        crossterm::queue!(
+            self.out,
+            RestorePosition,
+            MoveDown(score_size.height),
+            EndSynchronizedUpdate,
+        )?;
+
+        let at_bat_size = self.enqueue_at_bat(&model.at_bat)?;
+
+        crossterm::queue!(
+            self.out,
+            RestorePosition,
+            MoveDown(at_bat_size.height),
+            SavePosition,
+        )?;
+
+        self.out.flush()?;
+        Ok(())
+    }
+
+    fn enqueue_at_bat(&mut self, model: &AtBat) -> Result<Rect> {
+        write!(
+            self.out,
+            "{}-{} {} Out(s) {}{}{}⌂",
+            model.balls,
+            model.strikes,
+            model.outs,
+            if model.base_state[0] { "▦" } else { "□" },
+            if model.base_state[1] { "▦" } else { "□" },
+            if model.base_state[2] { "▦" } else { "□" },
+        )?;
+
+        Ok(Rect { width: 0, height: 1 })
+    }
+
+    fn enqueue_score(&mut self, model: &Score) -> Result<Rect> {
+        let score_string = format!(" Away {:<2} - {:2} Home ", model.away, model.home);
+        let score_width = score_string.chars().count();
+        let box_horizontal = format!("+{}+", (0..score_width).map(|_| "=").collect::<String>());
+
+        crossterm::queue!(
+            self.out,
+            SavePosition,
+        )?;
+        write!(
+            self.out,
+            "{}",
+            box_horizontal
+        )?;
+        crossterm::queue!(
+            self.out,
+            RestorePosition,
+            SavePosition,
+            MoveDown(1),
+        )?;
+        write!(
+            self.out,
+            "|{}|",
+            score_string,
+        )?;
+        crossterm::queue!(
+            self.out,
+            RestorePosition,
+            MoveDown(2),
+        )?;
+        write!(
+            self.out,
+            "{}",
+            box_horizontal,
+        )?;
+
+        Ok(Rect { width: score_width as u16, height: 3 })
     }
 }
 

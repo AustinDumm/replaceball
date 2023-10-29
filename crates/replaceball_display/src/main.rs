@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossterm::event::{self, Event, KeyCode};
-use display::{DisplayModel, AtBat};
+use display::{DisplayModel, AtBat, Score};
 
 mod display;
 
@@ -23,6 +23,10 @@ fn main() -> std::io::Result<()> {
         }
 
         if let Err(e) = sender.send(Some(DisplayModel {
+            score: Score {
+                away: 0,
+                home: 0,
+            },
             at_bat: AtBat {
                 strikes: 0,
                 balls: 0,
