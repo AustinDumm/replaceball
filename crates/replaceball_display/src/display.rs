@@ -11,6 +11,7 @@ use std::{
 use crossterm::{
     self,
     terminal::{
+        self,
         EnterAlternateScreen,
         LeaveAlternateScreen,
     },
@@ -32,21 +33,21 @@ pub struct Display<Out: Write + Send> {
     out: Out,
 }
 
-type Error = String;
+type Error = std::io::Error;
 type Result<T> = std::result::Result<T, Error>;
 
 impl<Out: Write + Send + 'static> Display<Out> {
-    pub fn start(writer: Out) -> (Sender<Option<DisplayModel>>, JoinHandle<()>) {
+    pub fn start(writer: Out) -> (Sender<Option<DisplayModel>>, JoinHandle<Result<()>>) {
         let (sender, receiver) = mpsc::channel();
         let mut display = Self {
             out: writer,
         };
 
         let handle = thread::spawn(move || {
-            if let Err(message) = display.run(receiver) {
-                display.cleanup().expect(&format!("Failed to cleanup on error: {}", message));
-                panic!("Display run: {}", message)
-            }
+            let result = display.run(receiver);
+            display.cleanup()?;
+
+            result
         });
 
         (sender, handle)
@@ -56,28 +57,33 @@ impl<Out: Write + Send + 'static> Display<Out> {
         self.init_terminal()?;
 
         while let Some(model) = receiver.recv().unwrap() {
-            self.show(model)?;
+            if let Err(e) = self.show(model) {
+                self.cleanup().expect("Failed to cleanup");
+                return Err(e)
+            }
         }
 
         self.cleanup()
     }
 
     fn init_terminal(&mut self) -> Result<()> {
-        crossterm::execute!(self.out, EnterAlternateScreen)
-            .map_err(|e| format!("{}", e))?;
-
-        Ok(())
+        terminal::enable_raw_mode()?;
+        crossterm::execute!(
+            self.out,
+            EnterAlternateScreen
+        )
     }
 
     fn cleanup(&mut self) -> Result<()> {
-        crossterm::execute!(self.out, LeaveAlternateScreen)
-            .map_err(|e| format!("{}", e))?;
-
-        Ok(())
+        crossterm::execute!(
+            self.out,
+            LeaveAlternateScreen
+        )?;
+        terminal::disable_raw_mode()
     }
 
     fn show(&mut self, model: DisplayModel) -> Result<()> {
-        todo!()
+        Err(Error::new(std::io::ErrorKind::Other, "Not yet implemented"))
     }
 }
 
