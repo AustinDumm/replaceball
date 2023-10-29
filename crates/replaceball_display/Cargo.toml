@@ -1,0 +1,13 @@
+[package]
+name = "replaceball_display"
+version = "0.1.0"
+edition = "2021"
+publish.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crossterm = "0.27.0"
+
+[dependencies.replaceball_sim]
+path = "../replaceball_sim/"
