@@ -19,16 +19,19 @@ use crossterm::{
     style::*,
 };
 
+#[derive(Clone)]
 pub struct DisplayModel {
     pub score: Score,
     pub at_bat: AtBat,
 }
 
+#[derive(Clone)]
 pub struct Score {
     pub home: u16,
     pub away: u16,
 }
 
+#[derive(Clone)]
 pub struct AtBat {
     pub strikes: u8,
     pub balls: u8,
