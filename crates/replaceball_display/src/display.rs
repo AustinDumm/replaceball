@@ -14,7 +14,9 @@ use crossterm::{
         self,
         EnterAlternateScreen,
         LeaveAlternateScreen, BeginSynchronizedUpdate, EndSynchronizedUpdate, Clear, ClearType,
-    }, cursor::{MoveTo, MoveDown, SavePosition, RestorePosition, MoveToColumn, Hide, Show},
+    },
+    cursor::*,
+    style::*,
 };
 
 pub struct DisplayModel {
@@ -127,18 +129,20 @@ impl<Out: Write + Send + 'static> Display<Out> {
     }
 
     fn enqueue_at_bat(&mut self, model: &AtBat) -> Result<Rect> {
-        write!(
+        crossterm::queue!(
             self.out,
-            "{}-{} {} Out(s) {}{}{}⌂",
-            model.balls,
-            model.strikes,
-            model.outs,
-            if model.base_state[0] { "▦" } else { "□" },
-            if model.base_state[1] { "▦" } else { "□" },
-            if model.base_state[2] { "▦" } else { "□" },
+            Print(format!(
+                " {}-{}  {} Out(s)  {}{}{}⌂",
+                model.balls,
+                model.strikes,
+                model.outs,
+                if model.base_state[0] { "⬥" } else { "⬦" },
+                if model.base_state[1] { "⬥" } else { "⬦" },
+                if model.base_state[2] { "⬥" } else { "⬦" },
+            )),
         )?;
 
-        Ok(Rect { width: 0, height: 1 })
+        Ok(Rect { width: 0, height: 2 })
     }
 
     fn enqueue_score(&mut self, model: &Score) -> Result<Rect> {
@@ -149,32 +153,23 @@ impl<Out: Write + Send + 'static> Display<Out> {
         crossterm::queue!(
             self.out,
             SavePosition,
-        )?;
-        write!(
-            self.out,
-            "{}",
-            box_horizontal
-        )?;
-        crossterm::queue!(
-            self.out,
+            Print(format!(
+                "{}",
+                box_horizontal
+            )),
             RestorePosition,
             SavePosition,
             MoveDown(1),
-        )?;
-        write!(
-            self.out,
-            "|{}|",
-            score_string,
-        )?;
-        crossterm::queue!(
-            self.out,
+            Print(format!(
+                "|{}|",
+                score_string,
+            )),
             RestorePosition,
             MoveDown(2),
-        )?;
-        write!(
-            self.out,
-            "{}",
-            box_horizontal,
+            Print(format!(
+                "{}",
+                box_horizontal,
+            )),
         )?;
 
         Ok(Rect { width: score_width as u16, height: 3 })
