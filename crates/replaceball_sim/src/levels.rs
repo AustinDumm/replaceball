@@ -54,14 +54,14 @@ lazy_static! {
     };
 
     pub static ref THROW_SPEED: Stat = Stat {
-        average: 57.25,
+        average: 55.25,
         std_dev: 7.0,
         range: (0.0, 150.0),
     };
 
     /// In Seconds
     pub static ref PLAYER_REACTION_TIME: Stat = Stat{
-        average: 1.85,
+        average: 1.95,
         std_dev: 0.1,
         range: (1.25, 2.5),
     };

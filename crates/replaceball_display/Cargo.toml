@@ -8,6 +8,9 @@ publish.workspace = true
 
 [dependencies]
 crossterm = "0.27.0"
+rand = "0.8.5"
+rand_distr = "0.4.3"
 
 [dependencies.replaceball_sim]
 path = "../replaceball_sim/"
+
