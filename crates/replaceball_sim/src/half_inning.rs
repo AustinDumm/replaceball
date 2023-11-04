@@ -119,7 +119,7 @@ impl HalfInningState {
 
     fn home_run(&mut self) {
         self.total_hits += 1;
-        self.runs_scored += self.bases.iter().filter(|b| **b).count() as u16;
+        self.runs_scored += self.bases.iter().filter(|b| **b).count() as u16 + 1;
         self.bases = [false, false, false];
     }
 }
