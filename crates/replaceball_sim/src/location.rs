@@ -1,5 +1,6 @@
 use std::ops::{RangeInclusive, Div, Mul, Add, Sub};
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;

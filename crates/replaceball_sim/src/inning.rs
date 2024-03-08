@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::{half_inning::simulate_half_inning, prelude::*};

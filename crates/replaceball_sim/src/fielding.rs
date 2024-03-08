@@ -1,7 +1,9 @@
 
 use std::fmt::Display;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
