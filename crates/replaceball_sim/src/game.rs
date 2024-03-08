@@ -1,15 +1,19 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     prelude::*,
     inning::simulate_inning,
 };
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GameRecord {
     pub innings: Box<[(InningRecord, GameProgress)]>,
     pub outcome: GameOutcome,
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GameOutcome {
     pub home_score: Score,
     pub away_score: Score,

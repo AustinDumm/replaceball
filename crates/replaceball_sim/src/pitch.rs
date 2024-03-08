@@ -1,7 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use crate::prelude::*;
 
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum PitchOutcome {
     /// Bool is true if it was a swinging strike
     Strike(bool),
@@ -13,6 +16,7 @@ pub enum PitchOutcome {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum PitchHeight {
     High,
@@ -21,6 +25,7 @@ pub enum PitchHeight {
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum PitchWidth {
     Left,
@@ -29,12 +34,14 @@ pub enum PitchWidth {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PitchLocation {
     pub height: PitchHeight,
     pub width: PitchWidth,
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PitchRecord {
     pub location: PitchLocation,
     pub outcome: PitchOutcome,

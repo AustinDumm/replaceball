@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     prelude::*,
     pitch::simulate_pitch,
@@ -6,6 +8,7 @@ use crate::{
 
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatRecord {
     pub batter_index: u8,
     pub pitches: Box<[(PitchRecord, AtBatProgress)]>,
@@ -13,12 +16,14 @@ pub struct AtBatRecord {
 }
 
 #[derive(Default, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatProgress {
     pub balls: u8,
     pub strikes: u8,
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AtBatOutcomeType {
     Hit(HitRecord),
     Walk,
@@ -26,6 +31,7 @@ pub enum AtBatOutcomeType {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatOutcome {
     pub outcome_type: AtBatOutcomeType,
 }

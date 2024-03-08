@@ -5,8 +5,15 @@ edition = "2021"
 publish.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+serde = ["dep:serde"]
 
 [dependencies]
 lazy_static = "1.4.0"
 strum = "0.25.0"
 strum_macros = "0.25.2"
+
+[dependencies.serde]
+version = "1.0"
+optional = true
+features = ["derive"]

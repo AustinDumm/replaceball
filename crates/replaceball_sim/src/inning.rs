@@ -1,9 +1,9 @@
-use crate::{
-    prelude::*,
-    half_inning::{ HalfInningRecord, simulate_half_inning },
-};
+use serde::{Deserialize, Serialize};
+
+use crate::{half_inning::simulate_half_inning, prelude::*};
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct InningRecord {
     pub away: HalfInningRecord,
     pub home: HalfInningRecord,
@@ -11,6 +11,7 @@ pub struct InningRecord {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct InningOutcome {
     pub away: HalfInningOutcome,
     pub home: HalfInningOutcome,
@@ -19,16 +20,10 @@ pub struct InningOutcome {
 pub fn simulate_inning(
     away_batting_index: u8,
     home_batting_index: u8,
-    decider: &mut impl Decider
+    decider: &mut impl Decider,
 ) -> InningRecord {
-    let away = simulate_half_inning(
-        away_batting_index,
-        decider,
-    );
-    let home = simulate_half_inning(
-        home_batting_index,
-        decider,
-    );
+    let away = simulate_half_inning(away_batting_index, decider);
+    let home = simulate_half_inning(home_batting_index, decider);
     let outcome = InningOutcome {
         away: away.outcome.clone(),
         home: home.outcome.clone(),
@@ -40,4 +35,3 @@ pub fn simulate_inning(
         outcome,
     }
 }
-

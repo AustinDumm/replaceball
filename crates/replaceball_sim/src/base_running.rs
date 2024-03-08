@@ -1,13 +1,17 @@
 
+use serde::{Deserialize, Serialize};
+
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BaseMovement {
     pub starting_base: Option<usize>,
     pub bases_moved: MoveType,
 }
 
 #[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MoveType {
     // Stores the base the player is out at
     Out(usize),
@@ -17,6 +21,7 @@ pub enum MoveType {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BaseRunningOutcome {
     pub outs_made: u8,
     pub runs_scored: u8,
@@ -25,6 +30,7 @@ pub struct BaseRunningOutcome {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BaseRunningRecord {
     pub movements: Box<[BaseMovement]>,
     pub outcome: BaseRunningOutcome,

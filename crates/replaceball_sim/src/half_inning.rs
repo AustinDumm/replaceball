@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     prelude::*,
     at_bat::simulate_at_bat,
@@ -5,12 +7,14 @@ use crate::{
 
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningRecord {
     pub at_bats: Box<[(AtBatRecord, HalfInningProgress)]>,
     pub outcome: HalfInningOutcome,
 }
 
 #[derive(Default, Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningProgress {
     pub bases: [bool; 3],
     pub score_change: Score,
@@ -18,6 +22,7 @@ pub struct HalfInningProgress {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningOutcome {
     pub runs_scored: Score,
     pub total_hits: u8,

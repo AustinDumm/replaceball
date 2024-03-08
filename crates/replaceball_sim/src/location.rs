@@ -1,12 +1,16 @@
 use std::ops::{RangeInclusive, Div, Mul, Add, Sub};
 
+use serde::{Deserialize, Serialize};
+
 use crate::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Distance(pub f64);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Angle in degrees from left foul line to right foul line that the ball was hit.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HitDirection(pub f64);
 
 impl HitDirection {
@@ -19,6 +23,7 @@ impl HitDirection {
 
 
 #[derive(Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Location {
     pub direction: HitDirection,
     pub distance: Distance,
