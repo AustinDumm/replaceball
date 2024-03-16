@@ -1,9 +1,11 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{prelude::*, fielding};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LaunchAngle(pub f64);
 
@@ -13,9 +15,10 @@ impl LaunchAngle {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-/// Everything is in feet per second
+#[derive(Clone, Copy, Debug, PartialEq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// Everything is in feet per second
 pub struct Speed(pub f64);
 
 impl Speed {
@@ -24,7 +27,8 @@ impl Speed {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HitRecord {
     pub direction: HitDirection,
@@ -34,7 +38,8 @@ pub struct HitRecord {
     pub outcome: HitOutcome,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HitOutcome {
     InPlay(FieldingRecord),
@@ -55,7 +60,8 @@ impl HitOutcome {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum HitType {
     Out,

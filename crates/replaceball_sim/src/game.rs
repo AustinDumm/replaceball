@@ -1,19 +1,22 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
     prelude::*,
     inning::simulate_inning,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GameRecord {
     pub innings: Box<[(InningRecord, GameProgress)]>,
     pub outcome: GameOutcome,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GameOutcome {
     pub home_score: Score,

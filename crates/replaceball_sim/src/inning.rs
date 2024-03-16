@@ -1,9 +1,11 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{half_inning::simulate_half_inning, prelude::*};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct InningRecord {
     pub away: HalfInningRecord,
@@ -11,7 +13,8 @@ pub struct InningRecord {
     pub outcome: InningOutcome,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct InningOutcome {
     pub away: HalfInningOutcome,

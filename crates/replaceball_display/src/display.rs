@@ -9,7 +9,6 @@ use std::{
 };
 
 use crossterm::{
-    self,
     terminal::{
         self,
         EnterAlternateScreen,

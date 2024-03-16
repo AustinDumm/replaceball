@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
     prelude::*,
@@ -7,14 +8,16 @@ use crate::{
 };
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningRecord {
     pub at_bats: Box<[(AtBatRecord, HalfInningProgress)]>,
     pub outcome: HalfInningOutcome,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningProgress {
     pub bases: [bool; 3],
@@ -22,7 +25,8 @@ pub struct HalfInningProgress {
     pub outs: u8,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct HalfInningOutcome {
     pub runs_scored: Score,

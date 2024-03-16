@@ -6,10 +6,12 @@ use serde::{Deserialize, Serialize};
 
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use ts_rs::TS;
 
 use crate::{prelude::*, base_running};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum Fielder {
@@ -85,25 +87,29 @@ impl Display for Fielder {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FieldingRecord {
     pub landing: BallLanding,
     pub base_running_record: BaseRunningRecord,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum BallLanding {
     Out(Fielder, Location),
     Landed(Location, FieldingPlay),
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TravelTime(pub f64);
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FieldingEvent {
     pub location: Location,
@@ -113,7 +119,8 @@ pub struct FieldingEvent {
 }
 
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FieldingPlay {
     pub from: Fielder,

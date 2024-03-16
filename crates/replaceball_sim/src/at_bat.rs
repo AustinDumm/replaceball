@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
     prelude::*,
@@ -8,7 +9,8 @@ use crate::{
 };
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatRecord {
     pub batter_index: u8,
@@ -16,14 +18,16 @@ pub struct AtBatRecord {
     pub outcome: AtBatOutcome,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatProgress {
     pub balls: u8,
     pub strikes: u8,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AtBatOutcomeType {
     Hit(HitRecord),
@@ -31,7 +35,8 @@ pub enum AtBatOutcomeType {
     Out,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TS)]
+#[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatOutcome {
     pub outcome_type: AtBatOutcomeType,
