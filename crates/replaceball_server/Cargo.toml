@@ -9,5 +9,5 @@ publish.workspace = true
 [dependencies.replaceball_sim]
 registry = "local-registry"
 version = "0.4.0"
-path = "../replaceball_sim/"
+#path = "../replaceball_sim/"
 features = ["serde"]

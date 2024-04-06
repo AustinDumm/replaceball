@@ -79,6 +79,10 @@ impl Team {
         &self.fielders[self.batting_order[index as usize] as usize]
     }
 
+    pub fn player_at_position(&self, position: &Fielder) -> &Player {
+        &self.fielders[*position as usize]
+    }
+
     pub fn pitcher(&self) -> &Player {
         &self.fielders[Fielder::Pitcher as usize]
     }
@@ -106,6 +110,8 @@ pub struct Player {
     pub hitter_hit_direction_bias: i8,
     pub hitter_launch_angle_bias: i8,
     pub hitter_hit_speed_bias: i8,
+
+    pub fielder_run_speed_bias: i8,
 }
 
 impl Default for Player {
@@ -129,6 +135,8 @@ impl Default for Player {
             hitter_hit_direction_bias: 0,
             hitter_launch_angle_bias: 0,
             hitter_hit_speed_bias: 0,
+
+            fielder_run_speed_bias: 0,
         }
     }
 }

@@ -35,7 +35,7 @@ impl Speed {
     const SPEED_MAX_BIAS_MULT: f64 = 1.333;
     const SPEED_MIN_BIAS_MULT: f64 = 0.667;
 
-    fn from_decider(decider: &mut impl Decider, bias: i8) -> Self {
+    pub fn from_decider(decider: &mut impl Decider, bias: i8) -> Self {
         let positive_bias = (bias as i16 - std::i8::MIN as i16) as u8;
         let mult_width = Self::SPEED_MAX_BIAS_MULT - Self::SPEED_MIN_BIAS_MULT;
         let mult =
@@ -125,6 +125,8 @@ pub fn simulate_hit(
             launch_angle,
             exit_speed,
             batter_lineup_index,
+            batting_team,
+            fielding_team,
             base_state,
             decider,
         ),
