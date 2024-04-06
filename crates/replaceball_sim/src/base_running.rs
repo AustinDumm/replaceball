@@ -31,7 +31,7 @@ pub struct BaseRunningOutcome {
     pub outs_made: u8,
     pub runs_scored: u8,
     pub batter_hit_type: HitType,
-    pub ending_base_state: [bool; 3],
+    pub ending_base_state: [Option<u8>; 3],
 }
 
 #[derive(Clone, PartialEq, Debug, TS)]
@@ -43,8 +43,9 @@ pub struct BaseRunningRecord {
 }
 
 pub fn simulate_base_running(
+    batter_lineup_index: u8,
     ball_landing: &BallLanding,
-    base_state: &[bool; 3],
+    base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
     match ball_landing {
@@ -63,6 +64,7 @@ pub fn simulate_base_running(
         ) => post_throw_base_running(
             location,
             fielding_play,
+            batter_lineup_index,
             base_state,
             decider,
         ),
@@ -72,7 +74,7 @@ pub fn simulate_base_running(
 fn post_out_base_running(
     _fielder: &Fielder,
     location: &Location,
-    base_state: &[bool; 3],
+    base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
     let mut base_movements = Vec::<BaseMovement>::new();
@@ -84,9 +86,9 @@ fn post_out_base_running(
     let mut runs_scored = 0u8;
     let mut has_thrown = false;
 
-    if base_state[Consts::THIRD] && location.distance.0 > 250.0 {
+    if base_state[Consts::THIRD].is_some() && location.distance.0 > 250.0 {
         // Runs home on the sac fly
-        base_state[Consts::THIRD] = false;
+        base_state[Consts::THIRD] = None;
         let third_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
 
         has_thrown = true;
@@ -116,12 +118,13 @@ fn post_out_base_running(
         }
     }
 
-    if !base_state[Consts::THIRD] &&
-        base_state[Consts::SECOND] &&
+    if base_state[Consts::THIRD].is_none() &&
+        base_state[Consts::SECOND].is_some() &&
         location.distance.0 > 275.0 &&
         location.direction.0 > 45.0 {
             // Man on second tags and runs to third
-            base_state[Consts::SECOND] = false;
+            let runner = base_state[Consts::SECOND];
+            base_state[Consts::SECOND] = None;
             let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
 
             let run_time = 90.0 / second_runner_speed;
@@ -141,7 +144,7 @@ fn post_out_base_running(
                     starting_base: Some(Consts::SECOND),
                     bases_moved: MoveType::Advanced(1),
                 });
-                base_state[Consts::THIRD] = true;
+                base_state[Consts::THIRD] = runner;
             }
     }
 
@@ -159,7 +162,8 @@ fn post_out_base_running(
 fn post_throw_base_running(
     _location: &Location,
     fielding_play: &FieldingPlay,
-    base_state: &[bool; 3],
+    batter_lineup_index: u8,
+    base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
     let mut base_movements = Vec::<BaseMovement>::new();
@@ -201,24 +205,25 @@ fn post_throw_base_running(
                 }
             }
 
-            if base_state[Consts::THIRD] {
+            if base_state[Consts::THIRD].is_some() {
                 runs_scored += 1;
-                base_state[Consts::THIRD] = false;
+                base_state[Consts::THIRD] = None;
                 base_movements.push(BaseMovement {
                     starting_base: Some(Consts::THIRD),
                     bases_moved: MoveType::Advanced(1),
                 });
             }
 
-            if base_state[Consts::SECOND] {
-                base_state[Consts::SECOND] = false;
+            if base_state[Consts::SECOND].is_some() {
+                let runner = base_state[Consts::SECOND];
+                base_state[Consts::SECOND] = None;
                 let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
 
                 let time_to_home = (90.0 * 2.0) / second_runner_speed;
                 let time_to_throw_home = fielding_play.from_event.location.distance.0 / fielder_throw_speed;
                 if time_to_home > time_to_throw_home && minimum_advance < 3 {
                     // Stays on third
-                    base_state[Consts::THIRD] = true;
+                    base_state[Consts::THIRD] = runner;
                     base_movements.push(BaseMovement {
                         starting_base: Some(Consts::SECOND),
                         bases_moved: MoveType::Advanced(1),
@@ -233,12 +238,13 @@ fn post_throw_base_running(
                 }
             }
 
-            if base_state[Consts::FIRST] {
-                base_state[Consts::FIRST] = false;
+            if base_state[Consts::FIRST].is_some() {
+                let runner = base_state[Consts::FIRST];
+                base_state[Consts::FIRST] = None;
 
                 match minimum_advance {
                     0 | 1 => {
-                        base_state[Consts::SECOND] = true;
+                        base_state[Consts::SECOND] = runner;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
                             bases_moved: MoveType::Advanced(1),
@@ -256,21 +262,21 @@ fn post_throw_base_running(
 
             match minimum_advance {
                 1 => {
-                    base_state[Consts::FIRST] = true;
+                    base_state[Consts::FIRST] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(1),
                     });
                 },
                 2 => {
-                    base_state[Consts::SECOND] = true;
+                    base_state[Consts::SECOND] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
                     });
                 },
                 3 => {
-                    base_state[Consts::THIRD] = true;
+                    base_state[Consts::THIRD] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
@@ -294,10 +300,10 @@ fn post_throw_base_running(
                 batter_box_exit_time,
             );
 
-            let mut new_base_state = [false; 3];
+            let mut new_base_state = [None; 3];
             match batter_advanced {
                 0 => {
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         // Force at second
                         let first_batter_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
                         let first_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
@@ -326,7 +332,7 @@ fn post_throw_base_running(
                                 // Fails to turn the double play
                                 batter_hit_type = HitType::FieldersChoice;
 
-                                new_base_state[Consts::FIRST] = true;
+                                new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                                 base_movements.push(BaseMovement {
                                     starting_base: None,
                                     bases_moved: MoveType::Advanced(1),
@@ -336,7 +342,7 @@ fn post_throw_base_running(
                             // Player is safe at second
                             batter_hit_type = HitType::Single;
 
-                            new_base_state[Consts::SECOND] = true;
+                            new_base_state[Consts::SECOND] = Some(batter_lineup_index);
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::FIRST),
                                 bases_moved: MoveType::Advanced(1),
@@ -346,7 +352,7 @@ fn post_throw_base_running(
                         // No force at second
                         batter_hit_type = HitType::Single;
 
-                        new_base_state[Consts::FIRST] = true;
+                        new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                         base_movements.push(BaseMovement {
                             starting_base: None,
                             bases_moved: MoveType::Advanced(1),
@@ -357,7 +363,7 @@ fn post_throw_base_running(
                         new_base_state[Consts::THIRD] = base_state[Consts::THIRD];
                     }
 
-                    if base_state.iter().all(|b| *b) {
+                    if base_state.iter().all(|b| b.is_some()) {
                         // Forces everywhere, player runs home
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -366,9 +372,11 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] && base_state[Consts::FIRST] {
+                    if base_state[Consts::SECOND].is_some() && base_state[Consts::FIRST].is_some() {
+                        let runner_from_second = base_state[Consts::SECOND];
+
                         // Force at third, player runs to third
-                        new_base_state[Consts::THIRD] = true;
+                        new_base_state[Consts::THIRD] = runner_from_second;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
                             bases_moved: MoveType::Advanced(1),
@@ -377,7 +385,7 @@ fn post_throw_base_running(
                 },
                 1 => {
                     // Batter has time to get to first for sure
-                    new_base_state[Consts::FIRST] = true;
+                    new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(1),
@@ -386,7 +394,7 @@ fn post_throw_base_running(
                     let first_batter_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
                     let first_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
                     let first_to_second_run_time = 90.0 / first_batter_speed + first_takeoff_delay;
-                    if first_to_second_run_time > fielding_play.to_event.travel_time.0 && base_state[Consts::FIRST] {
+                    if first_to_second_run_time > fielding_play.to_event.travel_time.0 && base_state[Consts::FIRST].is_some() {
                         // Force at second, player is out at second
                         batter_hit_type = HitType::FieldersChoice;
                         outs_made += 1;
@@ -395,25 +403,29 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Out(Consts::SECOND),
                         });
                     } else {
+                        let runner_from_first = base_state[Consts::FIRST];
+
                         // Force at second, player is safe at second
                         batter_hit_type = HitType::Single;
-                        new_base_state[Consts::SECOND] = true;
+                        new_base_state[Consts::SECOND] = runner_from_first;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
 
-                    if base_state[Consts::SECOND] && base_state[Consts::FIRST] {
+                    if base_state[Consts::SECOND].is_some() && base_state[Consts::FIRST].is_some() {
+                        let runner_from_second = base_state[Consts::SECOND];
+
                         // Force at third
-                        new_base_state[Consts::THIRD] = true;
+                        new_base_state[Consts::THIRD] = runner_from_second;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
 
-                    if base_state.iter().all(|b| *b) {
+                    if base_state.iter().all(|b| b.is_some()) {
                         // Force at home
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -425,7 +437,7 @@ fn post_throw_base_running(
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -433,7 +445,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -441,7 +453,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -449,7 +461,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::SECOND] = true;
+                    new_base_state[Consts::SECOND] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
@@ -458,7 +470,7 @@ fn post_throw_base_running(
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -466,7 +478,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -474,7 +486,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -482,7 +494,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::THIRD] = true;
+                    new_base_state[Consts::THIRD] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
@@ -491,7 +503,7 @@ fn post_throw_base_running(
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -499,7 +511,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -507,7 +519,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -531,10 +543,13 @@ fn post_throw_base_running(
                 batter_box_exit_time,
             );
 
-            let mut new_base_state = [false; 3];
+            let mut new_base_state = [None; 3];
             match batter_advanced {
                 0 => {
-                    if base_state[Consts::FIRST] && base_state[Consts::SECOND] {
+                    if base_state[Consts::FIRST].is_some() && base_state[Consts::SECOND].is_some() {
+                        let runner_from_first = base_state[Consts::FIRST];
+                        let runner_from_second = base_state[Consts::SECOND];
+
                         // Force at third
                         let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
                         let second_runner_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
@@ -594,7 +609,7 @@ fn post_throw_base_running(
                             } else {
                                 // No double Play at second
 
-                                new_base_state[Consts::SECOND] = true;
+                                new_base_state[Consts::SECOND] = runner_from_first;
                                 base_movements.push(BaseMovement {
                                     starting_base: Some(Consts::FIRST),
                                     bases_moved: MoveType::Advanced(1),
@@ -622,7 +637,7 @@ fn post_throw_base_running(
                                 } else {
                                     // No double play
                                     batter_hit_type = HitType::FieldersChoice;
-                                    new_base_state[Consts::FIRST] = true;
+                                    new_base_state[Consts::FIRST] = runner_from_first;
                                     base_movements.push(BaseMovement {
                                         starting_base: None,
                                         bases_moved: MoveType::Advanced(1),
@@ -632,7 +647,7 @@ fn post_throw_base_running(
                         } else {
                             // Player is safe at third
                             batter_hit_type = HitType::Single;
-                            new_base_state[Consts::THIRD] = true;
+                            new_base_state[Consts::THIRD] = runner_from_second;
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::SECOND),
                                 bases_moved: MoveType::Advanced(1),
@@ -641,14 +656,14 @@ fn post_throw_base_running(
                     } else {
                         // No runner going from Second to Third
                         batter_hit_type = HitType::Single;
-                        new_base_state[Consts::FIRST] = true;
+                        new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                         base_movements.push(BaseMovement {
                             starting_base: None,
                             bases_moved: MoveType::Advanced(1),
                         });
 
-                        if base_state[Consts::FIRST] {
-                            new_base_state[Consts::SECOND] = true;
+                        if base_state[Consts::FIRST].is_some() {
+                            new_base_state[Consts::SECOND] = base_state[Consts::FIRST];
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::FIRST),
                                 bases_moved: MoveType::Advanced(1),
@@ -658,7 +673,7 @@ fn post_throw_base_running(
                         new_base_state[Consts::THIRD] = base_state[Consts::THIRD];
                     }
 
-                    if base_state.iter().all(|b| *b) {
+                    if base_state.iter().all(|b| b.is_some()) {
                         // Forces everywhere, player runs home
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -669,12 +684,12 @@ fn post_throw_base_running(
                 },
                 1 => {
                     // Batter has time to get to first for sure
-                    new_base_state[Consts::FIRST] = true;
+                    new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(1),
                     });
-                    new_base_state[Consts::SECOND] = true;
+                    new_base_state[Consts::SECOND] = base_state[Consts::FIRST];
                     base_movements.push(BaseMovement {
                         starting_base: Some(Consts::FIRST),
                         bases_moved: MoveType::Advanced(1),
@@ -684,8 +699,8 @@ fn post_throw_base_running(
                     let second_runner_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
                     let second_to_third_run_time = 90.0 / second_runner_speed + second_runner_takeoff_delay;
                     if second_to_third_run_time > fielding_play.to_event.travel_time.0 &&
-                            base_state[Consts::SECOND] &&
-                            base_state[Consts::THIRD] {
+                            base_state[Consts::SECOND].is_some() &&
+                            base_state[Consts::THIRD].is_some() {
                         // Force at third, player is out at third
                         batter_hit_type = HitType::FieldersChoice;
                         outs_made += 1;
@@ -696,14 +711,14 @@ fn post_throw_base_running(
                     } else {
                         // Force at third, player is safe at third
                         batter_hit_type = HitType::Single;
-                        new_base_state[Consts::THIRD] = true;
+                        new_base_state[Consts::THIRD] = base_state[Consts::SECOND];
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
 
-                    if base_state.iter().all(|b| *b) {
+                    if base_state.iter().all(|b| b.is_some()) {
                         // Force at home
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -715,7 +730,7 @@ fn post_throw_base_running(
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -723,7 +738,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -731,7 +746,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -739,7 +754,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::SECOND] = true;
+                    new_base_state[Consts::SECOND] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
@@ -748,7 +763,7 @@ fn post_throw_base_running(
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -756,7 +771,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -764,7 +779,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -772,7 +787,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::THIRD] = true;
+                    new_base_state[Consts::THIRD] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
@@ -781,7 +796,7 @@ fn post_throw_base_running(
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -789,7 +804,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -797,7 +812,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -821,10 +836,10 @@ fn post_throw_base_running(
                 batter_box_exit_time,
             );
 
-            let mut new_base_state = [false; 3];
+            let mut new_base_state = [None; 3];
             match batter_advanced {
                 0 => {
-                    if base_state.iter().all(|b| *b) {
+                    if base_state.iter().all(|b| b.is_some()) {
                         // Force at home
                         let third_to_home_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
                         let third_to_home_takeoff = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
@@ -887,12 +902,12 @@ fn post_throw_base_running(
                             } else {
                                 // No double Play at third
 
-                                new_base_state[Consts::THIRD] = true;
+                                new_base_state[Consts::THIRD] = base_state[Consts::SECOND];
                                 base_movements.push(BaseMovement {
                                     starting_base: Some(Consts::SECOND),
                                     bases_moved: MoveType::Advanced(1),
                                 });
-                                new_base_state[Consts::SECOND] = true;
+                                new_base_state[Consts::SECOND] = base_state[Consts::FIRST];
                                 base_movements.push(BaseMovement {
                                     starting_base: Some(Consts::FIRST),
                                     bases_moved: MoveType::Advanced(1),
@@ -918,7 +933,7 @@ fn post_throw_base_running(
                                 } else {
                                     // No double play
                                     batter_hit_type = HitType::FieldersChoice;
-                                    new_base_state[Consts::FIRST] = true;
+                                    new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                                     base_movements.push(BaseMovement {
                                         starting_base: None,
                                         bases_moved: MoveType::Advanced(1),
@@ -946,7 +961,7 @@ fn post_throw_base_running(
                                 bases_moved: MoveType::Advanced(1),
                             });
 
-                            new_base_state[Consts::FIRST] = true;
+                            new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                             base_movements.push(BaseMovement {
                                 starting_base: None,
                                 bases_moved: MoveType::Advanced(1),
@@ -955,22 +970,22 @@ fn post_throw_base_running(
                     } else {
                         // No force at home
                         batter_hit_type = HitType::Single;
-                        new_base_state[Consts::FIRST] = true;
+                        new_base_state[Consts::FIRST] = Some(batter_lineup_index);
                         base_movements.push(BaseMovement {
                             starting_base: None,
                             bases_moved: MoveType::Advanced(1),
                         });
 
-                        if base_state[Consts::FIRST] {
-                            new_base_state[Consts::SECOND] = true;
+                        if base_state[Consts::FIRST].is_some() {
+                            new_base_state[Consts::SECOND] = base_state[Consts::FIRST];
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::FIRST),
                                 bases_moved: MoveType::Advanced(1),
                             });
                         }
 
-                        if base_state[Consts::SECOND] {
-                            new_base_state[Consts::THIRD] = true;
+                        if base_state[Consts::SECOND].is_some() {
+                            new_base_state[Consts::THIRD] = base_state[Consts::SECOND];
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::SECOND),
                                 bases_moved: MoveType::Advanced(1),
@@ -981,17 +996,17 @@ fn post_throw_base_running(
                 1 => {
                     // Batter has time to get to first for sure
                     batter_hit_type = HitType::Single;
-                    new_base_state[Consts::FIRST] = true;
+                    new_base_state[Consts::FIRST] = Some(batter_lineup_index);
 
-                    if base_state[Consts::FIRST] {
-                        new_base_state[Consts::SECOND] = true;
+                    if base_state[Consts::FIRST].is_some() {
+                        new_base_state[Consts::SECOND] = base_state[Consts::FIRST];
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         let second_run_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
                         let second_takeoff = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
                         let second_home_run_time = (2.0 * 90.0) / second_run_speed + second_takeoff;
@@ -1005,7 +1020,7 @@ fn post_throw_base_running(
                             });
                         } else {
                             // Stays at third
-                            new_base_state[Consts::THIRD] = true;
+                            new_base_state[Consts::THIRD] = base_state[Consts::SECOND];
                             base_movements.push(BaseMovement {
                                 starting_base: Some(Consts::SECOND),
                                 bases_moved: MoveType::Advanced(1),
@@ -1013,7 +1028,7 @@ fn post_throw_base_running(
                         }
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         // Safe at home
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -1025,7 +1040,7 @@ fn post_throw_base_running(
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -1033,7 +1048,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -1041,7 +1056,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -1049,7 +1064,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::SECOND] = true;
+                    new_base_state[Consts::SECOND] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
@@ -1058,7 +1073,7 @@ fn post_throw_base_running(
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -1066,7 +1081,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -1074,7 +1089,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),
@@ -1082,7 +1097,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    new_base_state[Consts::THIRD] = true;
+                    new_base_state[Consts::THIRD] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
@@ -1091,7 +1106,7 @@ fn post_throw_base_running(
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
-                    if base_state[Consts::FIRST] {
+                    if base_state[Consts::FIRST].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::FIRST),
@@ -1099,7 +1114,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::SECOND] {
+                    if base_state[Consts::SECOND].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::SECOND),
@@ -1107,7 +1122,7 @@ fn post_throw_base_running(
                         });
                     }
 
-                    if base_state[Consts::THIRD] {
+                    if base_state[Consts::THIRD].is_some() {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
                             starting_base: Some(Consts::THIRD),

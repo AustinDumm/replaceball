@@ -2,11 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{
-    prelude::*,
-    at_bat::simulate_at_bat,
-};
-
+use crate::{at_bat::simulate_at_bat, player::Team, prelude::*};
 
 #[derive(Clone, Debug, TS)]
 #[ts(export)]
@@ -35,7 +31,9 @@ pub struct HalfInningOutcome {
 
 pub fn simulate_half_inning(
     starting_index: u8,
-    decider: &mut impl Decider
+    batting_team: &Team,
+    fielding_team: &Team,
+    decider: &mut impl Decider,
 ) -> HalfInningRecord {
     let mut state = HalfInningState::new();
     let mut at_bats = Vec::<(AtBatRecord, HalfInningProgress)>::new();
@@ -44,18 +42,20 @@ pub fn simulate_half_inning(
     while state.outs_remaining > 0 {
         let at_bat_record = simulate_at_bat(
             batting_index,
+            batting_team,
+            fielding_team,
             decider,
             &state.bases,
         );
 
         match at_bat_record.outcome.outcome_type {
             AtBatOutcomeType::Hit(ref hit_record) => state.hit(&hit_record),
-            AtBatOutcomeType::Walk => state.walk(),
+            AtBatOutcomeType::Walk => state.walk(batting_index),
             AtBatOutcomeType::Out => state.out(),
         };
 
         let progress = HalfInningProgress {
-            bases: state.bases.clone(),
+            bases: state.bases.map(|base| base.is_some()),
             score_change: state.runs_scored,
             outs: state.number_of_outs(),
         };
@@ -76,7 +76,7 @@ pub fn simulate_half_inning(
 }
 
 struct HalfInningState {
-    bases: [bool; 3],
+    bases: [Option<u8>; 3],
     outs_remaining: u8,
     runs_scored: Score,
     total_hits: u8,
@@ -85,7 +85,7 @@ struct HalfInningState {
 impl HalfInningState {
     fn new() -> Self {
         Self {
-            bases: [false, false, false],
+            bases: [None, None, None],
             outs_remaining: Consts::OUTS_PER_HALF_INNING,
             runs_scored: 0,
             total_hits: 0,
@@ -118,19 +118,26 @@ impl HalfInningState {
         }
     }
 
-    fn walk(&mut self) {
-        self.runs_scored += if self.bases.iter().all(|on| *on) { 1 } else { 0 };
-        self.bases[Consts::THIRD] = self.bases.iter().take(2).all(|on| *on) ||
-            self.bases[Consts::THIRD];
-        self.bases[Consts::SECOND] = self.bases.iter().take(1).all(|on| *on) ||
-            self.bases[Consts::SECOND];
-        self.bases[Consts::FIRST] = true;
+    fn walk(&mut self, batter_lineup_index: u8) {
+        self.runs_scored += if self.bases.iter().all(|on| on.is_some()) {
+            1
+        } else {
+            0
+        };
+        self.bases[Consts::THIRD] = if self.bases.iter().take(2).all(|on| on.is_some()) {
+            self.bases[Consts::SECOND]
+        } else {
+            self.bases[Consts::THIRD]
+        };
+        self.bases[Consts::SECOND] =
+            if self.bases.iter().take(1).all(|on| on.is_some()) { self.bases[Consts::FIRST] } else { self.bases[Consts::SECOND] };
+
+        self.bases[Consts::FIRST] = Some(batter_lineup_index);
     }
 
     fn home_run(&mut self) {
         self.total_hits += 1;
-        self.runs_scored += self.bases.iter().filter(|b| **b).count() as u16 + 1;
-        self.bases = [false, false, false];
+        self.runs_scored += self.bases.iter().filter(|b| b.is_some()).count() as u16 + 1;
+        self.bases = [None, None, None];
     }
 }
-

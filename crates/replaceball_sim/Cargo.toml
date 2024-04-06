@@ -1,6 +1,6 @@
 [package]
 name = "replaceball_sim"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 publish.workspace = true
 
@@ -21,6 +21,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 serde_json = "1.0"
 ts-rs = "7.1"
+arraymap = "0.1.1"
 
 [dependencies.serde]
 version = "1.0"

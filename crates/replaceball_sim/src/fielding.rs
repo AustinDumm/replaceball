@@ -134,7 +134,8 @@ pub fn simulate_fielding(
     direction: HitDirection,
     launch_angle: LaunchAngle,
     exit_speed: Speed,
-    base_state: &[bool; 3],
+    batter_lineup_index: u8,
+    base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> HitOutcome {
     let hit_locations = ball_path(
@@ -172,6 +173,7 @@ pub fn simulate_fielding(
             location.clone(),
         );
         let base_running_record = base_running::simulate_base_running(
+            batter_lineup_index,
             &landing,
             base_state,
             decider,
@@ -184,13 +186,14 @@ pub fn simulate_fielding(
             }
         )
     } else {
-        HitOutcome::InPlay(hit(hit_locations.landed_path, base_state, decider))
+        HitOutcome::InPlay(hit(batter_lineup_index, hit_locations.landed_path, base_state, decider))
     }
 }
 
 fn hit(
+    batter_lineup_index: u8,
     landed_at: FieldingEvent,
-    base_state: &[bool; 3],
+    base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> FieldingRecord {
     let force_play_index = force_play(base_state);
@@ -231,6 +234,7 @@ fn hit(
     };
 
     let base_running_record = base_running::simulate_base_running(
+        batter_lineup_index,
         &BallLanding::Landed(
             fielded_at,
             fielding_play.clone(),
@@ -374,10 +378,10 @@ fn force_at_home(
     )
 }
 
-fn force_play(base_state: &[bool; 3]) -> usize {
-    if base_state[0] {
-        if base_state[1] {
-            if base_state[2] {
+fn force_play(base_state: &[Option<u8>; 3]) -> usize {
+    if base_state[0].is_some() {
+        if base_state[1].is_some() {
+            if base_state[2].is_some() {
                 3
             } else {
                 2

@@ -19,9 +19,13 @@ pub struct HitDirection(pub f64);
 
 impl HitDirection {
     const MAX_ANGLE: f64 = 90.0;
+    const MAX_BIAS_ANGLE: f64 = 30.0;
 
-    pub fn from_decider(decider: &mut impl Decider) -> Self {
-        Self(decider.roll_uniform(0.0..Self::MAX_ANGLE))
+    pub fn from_decider(decider: &mut impl Decider, hitter_bias: i8) -> Self {
+        let result = Self(decider.roll_uniform(0.0..Self::MAX_ANGLE));
+        let biased_result = result.0 + Self::MAX_BIAS_ANGLE * (hitter_bias as f64 / std::i8::MAX as f64);
+
+        HitDirection(clamp(biased_result, 0.0..=Self::MAX_ANGLE))
     }
 }
 

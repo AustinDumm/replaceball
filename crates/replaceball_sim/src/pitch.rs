@@ -4,7 +4,6 @@ use ts_rs::TS;
 
 use crate::prelude::*;
 
-
 #[derive(Clone, Debug, PartialEq, Eq, TS)]
 #[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -53,14 +52,15 @@ pub struct PitchRecord {
     pub location: PitchLocation,
     pub outcome: PitchOutcome,
 }
-       
 
 pub fn simulate_pitch(
-    decider: &mut impl Decider
+    decider: &mut impl Decider,
+    batter: &Player,
+    pitcher: &Player,
 ) -> PitchRecord {
-    let location = decider.roll_pitch_location();
+    let location = decider.roll_pitch_location(pitcher.pitch_height_bias, pitcher.pitch_width_bias);
 
-    if decider.flip(*levels::BALLS_PER_PITCH) {
+    if decider.flip(*levels::BALLS_PER_PITCH, pitcher.pitch_strike_bias) {
         // Is Ball
         let location =
             if location.height == PitchHeight::Middle && location.width == PitchWidth::Center {
@@ -73,13 +73,19 @@ pub fn simulate_pitch(
                 location
             };
 
-        if decider.flip(*levels::SWINGS_PER_BALL) {
+        if decider.flip(*levels::SWINGS_PER_BALL, batter.hitter_swing_on_ball_bias) {
             // Swings anyways
 
-            if decider.flip(*levels::CONTACTS_PER_BALL_SWING) {
+            if decider.flip(
+                *levels::CONTACTS_PER_BALL_SWING,
+                batter.hitter_contact_on_ball_bias,
+            ) {
                 // Makes contact
 
-                if decider.flip(*levels::FOULS_PER_BALL_CONTACT) {
+                if decider.flip(
+                    *levels::FOULS_PER_BALL_CONTACT,
+                    batter.hitter_foul_on_ball_contact_bias,
+                ) {
                     // Fouls it off
                     PitchRecord {
                         location,
@@ -109,13 +115,22 @@ pub fn simulate_pitch(
     } else {
         // Is Strike
 
-        if decider.flip(*levels::SWINGS_PER_STRIKE) {
+        if decider.flip(
+            *levels::SWINGS_PER_STRIKE,
+            batter.hitter_swing_on_strike_bias,
+        ) {
             // Swung at the strike
 
-            if decider.flip(*levels::CONTACTS_PER_STRIKE_SWING) {
+            if decider.flip(
+                *levels::CONTACTS_PER_STRIKE_SWING,
+                batter.hitter_contact_on_strike_bias,
+            ) {
                 // Made contact
 
-                if decider.flip(*levels::FOULS_PER_STRIKE_CONTACT) {
+                if decider.flip(
+                    *levels::FOULS_PER_STRIKE_CONTACT,
+                    batter.hitter_foul_on_strike_contact_bias,
+                ) {
                     // Foul ball
                     PitchRecord {
                         location,

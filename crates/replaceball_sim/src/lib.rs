@@ -11,6 +11,7 @@ mod inning;
 pub mod levels;
 pub mod location;
 mod pitch;
+mod player;
 mod stat;
 
 pub mod prelude {
@@ -26,6 +27,7 @@ pub mod prelude {
         levels,
         location::{self, *},
         pitch::{PitchHeight, PitchLocation, PitchOutcome, PitchRecord, PitchWidth},
+        player::Player,
         stat::{Skill, Stat},
         Decider, Score,
     };
@@ -64,15 +66,29 @@ impl Decider for ExternalDecider {
         roll < probability
     }
 
-    fn roll_pitch_location(&mut self) -> PitchLocation {
-        let width = match gen_range(0, 3) {
+    fn roll_pitch_location(
+        &mut self,
+        pitch_height_bias: i8,
+        pitch_width_bias: i8,
+    ) -> PitchLocation {
+        let zone_count = 3;
+        let zone_size = std::i8::MAX;
+        let full_range = zone_count * zone_size;
+
+        let width = match (gen_range(0, full_range as u64)
+            .saturating_add_signed(pitch_width_bias as i64) as f32
+            / zone_size as f32) as u8
+        {
             0 => PitchWidth::Left,
             1 => PitchWidth::Center,
             2 => PitchWidth::Right,
             _ => unreachable!(),
         };
 
-        let height = match gen_range(0, 3) {
+        let height = match (gen_range(0, full_range as u64)
+            .saturating_add_signed(pitch_height_bias as i64) as f32
+            / zone_size as f32) as u8
+        {
             0 => PitchHeight::High,
             1 => PitchHeight::Middle,
             2 => PitchHeight::Low,
@@ -101,8 +117,8 @@ impl Decider for ExternalDecider {
         }
     }
 
-    fn flip(&mut self, probability: f64) -> bool {
-        gen_float_range(0.0, 1.0) < probability
+    fn flip(&mut self, probability: f64, bias: i8) -> bool {
+        (gen_float_range(0.0, 1.0) + (bias as f64 / std::i8::MAX as f64)) < probability
     }
 
     fn roll_uniform(&mut self, range: std::ops::Range<f64>) -> f64 {
@@ -114,7 +130,7 @@ impl Decider for ExternalDecider {
 struct Test {
     x: i32,
     y: f32,
-    name: String
+    name: String,
 }
 
 #[wasm_bindgen]
@@ -127,10 +143,10 @@ pub fn wasm_simulate_game() -> JsValue {
 pub type Score = u16;
 pub trait Decider {
     fn roll(&mut self, check: u64, count: u64, adjust: u64) -> bool;
-    fn roll_pitch_location(&mut self) -> pitch::PitchLocation;
+    fn roll_pitch_location(&mut self, height_bias: i8, width_bias: i8) -> pitch::PitchLocation;
     fn roll_index(&mut self, range: Range<usize>) -> usize;
 
-    fn flip(&mut self, probability: f64) -> bool;
+    fn flip(&mut self, probability: f64, bias: i8) -> bool;
 
     fn roll_uniform(&mut self, range: Range<f64>) -> f64;
 

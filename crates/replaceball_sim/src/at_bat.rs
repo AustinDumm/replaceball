@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    prelude::*,
-    pitch::simulate_pitch,
-    hit::simulate_hit,
+    hit::simulate_hit, pitch::simulate_pitch, player::Team, prelude::*
 };
 
 
@@ -14,6 +12,7 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatRecord {
     pub batter_index: u8,
+    pub player: Player,
     pub pitches: Box<[(PitchRecord, AtBatProgress)]>,
     pub outcome: AtBatOutcome,
 }
@@ -44,14 +43,18 @@ pub struct AtBatOutcome {
 
 pub fn simulate_at_bat(
     batter_index: u8,
+    batting_team: &Team,
+    fielding_team: &Team,
     decider: &mut impl Decider,
-    base_state: &[bool; 3],
+    base_state: &[Option<u8>; 3],
 ) -> AtBatRecord {
+    let batter = batting_team.player_at_batting_index(batter_index);
+    let pitcher = fielding_team.pitcher();
     let mut state = AtBatState::new();
     let mut pitches = Vec::<(PitchRecord, AtBatProgress)>::new();
 
     while state.outcome_type().is_none() {
-        let pitch_record = simulate_pitch(decider);
+        let pitch_record = simulate_pitch(decider, batter, pitcher);
 
         match pitch_record.outcome {
             PitchOutcome::Strike(_) => state.strike(),
@@ -60,6 +63,9 @@ pub fn simulate_at_bat(
             PitchOutcome::Hit(is_ball) => handle_hit(
                 &pitch_record.location,
                 is_ball,
+                batter_index,
+                batting_team,
+                fielding_team,
                 decider,
                 &mut state,
                 base_state,
@@ -80,6 +86,7 @@ pub fn simulate_at_bat(
 
     AtBatRecord {
         batter_index,
+        player: batter.clone(),
         pitches: pitches.into_boxed_slice(),
         outcome,
     }
@@ -88,13 +95,19 @@ pub fn simulate_at_bat(
 fn handle_hit(
     pitch_location: &PitchLocation,
     is_ball: bool,
+    batter_lineup_index: u8,
+    batting_team: &Team,
+    fielding_team: &Team,
     decider: &mut impl Decider,
     state: &mut AtBatState,
-    base_state: &[bool; 3],
+    base_state: &[Option<u8>; 3],
 ) {
     let hit_record = simulate_hit(
         pitch_location,
         is_ball,
+        batter_lineup_index,
+        batting_team,
+        fielding_team,
         decider,
         base_state,
     );
