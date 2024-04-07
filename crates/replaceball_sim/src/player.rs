@@ -112,6 +112,9 @@ pub struct Player {
     pub hitter_hit_speed_bias: i8,
 
     pub fielder_run_speed_bias: i8,
+    pub fielder_reaction_time_bias: i8,
+    pub fielder_throw_speed_bias: i8,
+    pub fielder_transfer_time_bias: i8,
 }
 
 impl Default for Player {
@@ -137,6 +140,9 @@ impl Default for Player {
             hitter_hit_speed_bias: 0,
 
             fielder_run_speed_bias: 0,
+            fielder_reaction_time_bias: 0,
+            fielder_throw_speed_bias: 0,
+            fielder_transfer_time_bias: 0,
         }
     }
 }

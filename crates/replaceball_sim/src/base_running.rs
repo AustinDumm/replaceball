@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::prelude::*;
+use crate::{player::Team, prelude::*};
 
 #[derive(Clone, PartialEq, Debug, TS)]
 #[ts(export)]
@@ -44,6 +44,8 @@ pub struct BaseRunningRecord {
 
 pub fn simulate_base_running(
     batter_lineup_index: u8,
+    batting_team: &Team,
+    fielding_team: &Team,
     ball_landing: &BallLanding,
     base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,

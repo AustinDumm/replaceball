@@ -159,7 +159,15 @@ pub fn simulate_fielding(
             )
         })
         .filter(|(fielder, distance)| {
-            (distance.1.0 / Speed::from_decider(decider, fielding_team.player_at_position(fielder).fielder_run_speed_bias).0)
+            (distance.1 .0
+                / Speed::from_decider(
+                    decider,
+                    *levels::FIELDER_SPEED,
+                    fielding_team
+                        .player_at_position(fielder)
+                        .fielder_run_speed_bias,
+                )
+                .0)
                 < hit_locations.catchable_path.travel_time.0
         })
         .collect();
@@ -170,8 +178,14 @@ pub fn simulate_fielding(
 
     if let Some((fielder, (location, _))) = eligible_fielders.first() {
         let landing = BallLanding::Out(*fielder, location.clone());
-        let base_running_record =
-            base_running::simulate_base_running(batter_lineup_index, &landing, base_state, decider);
+        let base_running_record = base_running::simulate_base_running(
+            batter_lineup_index,
+            batting_team,
+            fielding_team,
+            &landing,
+            base_state,
+            decider,
+        );
 
         HitOutcome::InPlay(FieldingRecord {
             landing,
@@ -180,6 +194,8 @@ pub fn simulate_fielding(
     } else {
         HitOutcome::InPlay(hit(
             batter_lineup_index,
+            batting_team,
+            fielding_team,
             hit_locations.landed_path,
             base_state,
             decider,
@@ -189,19 +205,22 @@ pub fn simulate_fielding(
 
 fn hit(
     batter_lineup_index: u8,
+    batting_team: &Team,
+    fielding_team: &Team,
     landed_at: FieldingEvent,
     base_state: &[Option<u8>; 3],
     decider: &mut impl Decider,
 ) -> FieldingRecord {
     let force_play_index = force_play(base_state);
     let (closest_fielder, fielded_at, distance_to_fielding, time_fielding) =
-        closest_fielder(&landed_at, decider);
+        closest_fielder(&landed_at, fielding_team, decider);
     let fielding_play = match force_play_index {
         0 => force_at_first(
             closest_fielder,
             distance_to_fielding,
             fielded_at,
             time_fielding,
+            fielding_team,
             decider,
         ),
         // Force at second
@@ -210,6 +229,7 @@ fn hit(
             distance_to_fielding,
             fielded_at,
             time_fielding,
+            fielding_team,
             decider,
         ),
         // Force at third
@@ -218,6 +238,7 @@ fn hit(
             distance_to_fielding,
             fielded_at,
             time_fielding,
+            fielding_team,
             decider,
         ),
         // Force at home
@@ -226,6 +247,7 @@ fn hit(
             distance_to_fielding,
             fielded_at,
             time_fielding,
+            fielding_team,
             decider,
         ),
         _ => unreachable!(),
@@ -233,6 +255,8 @@ fn hit(
 
     let base_running_record = base_running::simulate_base_running(
         batter_lineup_index,
+        batting_team,
+        fielding_team,
         &BallLanding::Landed(fielded_at, fielding_play.clone()),
         base_state,
         decider,
@@ -246,17 +270,20 @@ fn hit(
 
 fn throw_to_force(
     throw_start_time: TravelTime,
+    from_fielder: Fielder,
     to_location: Location,
     to_fielder: Fielder,
     fielder: Fielder,
     _distance: Distance,
     fielded_at: Location,
     base_index: usize,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> FieldingPlay {
+    let player = fielding_team.player_at_position(&from_fielder);
     let throw_time = TravelTime(
         (fielded_at.distance(to_location)
-            / decider.roll_stat(*levels::THROW_SPEED, Skill::default()))
+            / decider.roll_std_dev_skill_stat(*levels::THROW_SPEED, player.fielder_throw_speed_bias))
             + throw_start_time.0,
     );
 
@@ -280,16 +307,19 @@ fn force_at_first(
     distance: Distance,
     fielded_at: Location,
     fielded_at_time: TravelTime,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> FieldingPlay {
     throw_to_force(
         fielded_at_time,
+        fielder,
         Location::first_base(),
         Fielder::FirstBase,
         fielder,
         distance,
         fielded_at,
         Consts::FIRST,
+        fielding_team,
         decider,
     )
 }
@@ -299,6 +329,7 @@ fn force_at_second(
     distance: Distance,
     fielded_at: Location,
     fielded_at_time: TravelTime,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> FieldingPlay {
     let to_fielder = match fielder {
@@ -320,12 +351,14 @@ fn force_at_second(
 
     throw_to_force(
         fielded_at_time,
+        fielder,
         to_location,
         to_fielder,
         fielder,
         distance,
         fielded_at,
         Consts::SECOND,
+        fielding_team,
         decider,
     )
 }
@@ -335,16 +368,19 @@ fn force_at_third(
     distance: Distance,
     fielded_at: Location,
     fielded_at_time: TravelTime,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> FieldingPlay {
     throw_to_force(
         fielded_at_time,
+        fielder,
         Location::third_base(),
         Fielder::ThirdBase,
         fielder,
         distance,
         fielded_at,
         Consts::THIRD,
+        fielding_team,
         decider,
     )
 }
@@ -354,16 +390,19 @@ fn force_at_home(
     distance: Distance,
     fielded_at: Location,
     fielded_at_time: TravelTime,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> FieldingPlay {
     throw_to_force(
         fielded_at_time,
+        fielder,
         Location::home_plate(),
         Fielder::Catcher,
         fielder,
         distance,
         fielded_at,
         Consts::HOME,
+        fielding_team,
         decider,
     )
 }
@@ -386,14 +425,22 @@ fn force_play(base_state: &[Option<u8>; 3]) -> usize {
 
 fn closest_fielder(
     event: &FieldingEvent,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> (Fielder, Location, Distance, TravelTime) {
-    let fielder_transfer = decider.roll_stat(*levels::FIELDER_TRANSFER_TIME, Skill::default());
-
     let mut fielder_distances: Vec<_> = Fielder::iter()
         .filter_map(|fielder| {
-            let reaction_time = decider.roll_stat(*levels::PLAYER_REACTION_TIME, Skill::default());
-            let player_speed = decider.roll_stat(*levels::FIELDER_SPEED, Skill::default());
+            let player = fielding_team.player_at_position(&fielder);
+            let reaction_time = decider.roll_std_dev_skill_stat(
+                *levels::PLAYER_REACTION_TIME,
+                player.fielder_reaction_time_bias,
+            );
+
+            let player_speed = decider.roll_std_dev_skill_stat(
+                *levels::FIELDER_SPEED,
+                player.fielder_run_speed_bias,
+            );
+
             let ball_speed = event.location.distance.0 / event.travel_time.0;
             let ball_location_on_reaction = Location {
                 direction: event.location.direction,
@@ -417,6 +464,8 @@ fn closest_fielder(
                     let fielding_location = Cartesian::from(fielding_location);
                     let travel_distance = fielding_location.sub(starting_location).magnitude();
 
+                    let fielder_transfer =
+                        decider.roll_std_dev_skill_stat(*levels::FIELDER_TRANSFER_TIME, player.fielder_transfer_time_bias);
                     Some((
                         fielder,
                         fielding_location.into(),
@@ -441,7 +490,9 @@ fn closest_fielder(
         // No one could field the ball at top speed. Try fielding after landing at half speed
         let mut fielder_distances: Vec<_> = Fielder::iter()
             .filter_map(|fielder| {
-                let player_speed = decider.roll_stat(*levels::FIELDER_SPEED, Skill::default());
+                let player = fielding_team.player_at_position(&fielder);
+                let player_speed = decider.roll_std_dev_skill_stat(*levels::FIELDER_SPEED, player.fielder_run_speed_bias);
+
                 let ball_speed = event.location.distance.0 / event.travel_time.0;
 
                 let starting_location = Cartesian::from(fielder.starting_location());
@@ -459,6 +510,9 @@ fn closest_fielder(
                         None
                     } else {
                         let travel_distance = fielding_location.sub(starting_location).magnitude();
+
+                        let fielder_transfer =
+                            decider.roll_std_dev_skill_stat(*levels::FIELDER_TRANSFER_TIME, player.fielder_transfer_time_bias);
                         Some((
                             fielder,
                             fielding_location.into(),
@@ -483,8 +537,7 @@ fn closest_fielder(
         if let Some(found) = fielder_distances.first() {
             *found
         } else {
-            // Still no one can field the ball. Get a player to the ball at the wall (350 at the
-            // corners, 400 in center.
+            // Still no one can field the ball. Get a player to the ball at the wall 
             let ball_distance =
                 if event.location.direction.0 < 20.0 || 70.0 < event.location.direction.0 {
                     325.0
@@ -502,10 +555,14 @@ fn closest_fielder(
 
             let mut fielder_distances: Vec<_> = Fielder::iter()
                 .map(|fielder| {
+                    let player = fielding_team.player_at_position(&fielder);
                     let reaction_time =
-                        decider.roll_stat(*levels::PLAYER_REACTION_TIME, Skill::default());
+                        decider.roll_std_dev_skill_stat(*levels::PLAYER_REACTION_TIME, player.fielder_reaction_time_bias);
                     let ball_speed = event.location.distance.0 / event.travel_time.0;
                     let distance = (ball_vector - fielder.starting_location().into()).magnitude();
+                    let fielder_transfer =
+                        decider.roll_std_dev_skill_stat(*levels::FIELDER_TRANSFER_TIME, player.fielder_transfer_time_bias);
+
                     (
                         fielder,
                         ball_location,

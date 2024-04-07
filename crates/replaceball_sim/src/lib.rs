@@ -151,6 +151,9 @@ pub trait Decider {
     fn roll_uniform(&mut self, range: Range<f64>) -> f64;
 
     fn roll_stat(&mut self, stat: Stat, skill: Skill) -> f64;
+    fn roll_std_dev_skill_stat(&mut self, stat: Stat, bias: i8) -> f64 {
+        self.roll_stat(stat, Skill::std_dev_bias_skill(bias, stat))
+    }
 }
 
 #[cfg(test)]

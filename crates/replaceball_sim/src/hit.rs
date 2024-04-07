@@ -35,16 +35,17 @@ impl Speed {
     const SPEED_MAX_BIAS_MULT: f64 = 1.333;
     const SPEED_MIN_BIAS_MULT: f64 = 0.667;
 
-    pub fn from_decider(decider: &mut impl Decider, bias: i8) -> Self {
+    pub fn from_decider(decider: &mut impl Decider, stat: Stat, bias: i8) -> Self {
         let positive_bias = (bias as i16 - std::i8::MIN as i16) as u8;
         let mult_width = Self::SPEED_MAX_BIAS_MULT - Self::SPEED_MIN_BIAS_MULT;
         let mult =
             (positive_bias as f64 / std::u8::MAX as f64) * mult_width + Self::SPEED_MIN_BIAS_MULT;
 
         Self(decider.roll_stat(
-            *levels::HIT_EXIT_SPEED,
+            stat,
             Skill {
                 average_multiplier: mult,
+                average_shift: 0.0,
                 std_dev_multiplier: 1.0,
             },
         ))
@@ -107,7 +108,11 @@ pub fn simulate_hit(
     let direction = HitDirection::from_decider(decider, batter.hitter_hit_direction_bias);
 
     let launch_angle = LaunchAngle::from_decider(decider, batter.hitter_launch_angle_bias);
-    let exit_speed = Speed::from_decider(decider, batter.hitter_hit_speed_bias);
+    let exit_speed = Speed::from_decider(
+        decider,
+        *levels::HIT_EXIT_SPEED,
+        batter.hitter_hit_speed_bias
+    );
 
     // Let misses on average launch angle drop exit speed to simulate missing the "sweet spot"
     let launch_error = clamp(
