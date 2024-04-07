@@ -1,4 +1,3 @@
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -51,103 +50,116 @@ pub fn simulate_base_running(
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
     match ball_landing {
-        BallLanding::Out(
-            fielder,
-            location
-        ) => post_out_base_running(
+        BallLanding::Out(fielder, location) => post_out_base_running(
             fielder,
             location,
             base_state,
+            batting_team,
+            fielding_team,
             decider,
         ),
-        BallLanding::Landed(
-            location,
-            fielding_play
-        ) => post_throw_base_running(
+        BallLanding::Landed(location, fielding_play) => post_throw_base_running(
             location,
             fielding_play,
             batter_lineup_index,
             base_state,
+            batting_team,
+            fielding_team,
             decider,
         ),
     }
 }
 
 fn post_out_base_running(
-    _fielder: &Fielder,
+    fielder: &Fielder,
     location: &Location,
     base_state: &[Option<u8>; 3],
+    batting_team: &Team,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
+    let fielding_player = fielding_team.player_at_position(fielder);
+
     let mut base_movements = Vec::<BaseMovement>::new();
     let mut base_state = base_state.clone();
-    let fielder_throw_speed = decider.roll_stat(*levels::THROW_SPEED, Skill::default());
+    let fielder_throw_speed = decider.roll_std_dev_skill_stat(
+        *levels::THROW_SPEED,
+        fielding_player.fielder_throw_speed_bias,
+    );
 
     // Out was already made
     let mut outs_made = 1u8;
     let mut runs_scored = 0u8;
     let mut has_thrown = false;
 
+    let first_runner = base_state[Consts::FIRST]
+        .map(|batter_index| batting_team.player_at_batting_index(batter_index));
+    let second_runner = base_state[Consts::SECOND]
+        .map(|batter_index| batting_team.player_at_batting_index(batter_index));
+    let third_runner = base_state[Consts::THIRD]
+        .map(|batter_index| batting_team.player_at_batting_index(batter_index));
+
     if base_state[Consts::THIRD].is_some() && location.distance.0 > 250.0 {
         // Runs home on the sac fly
         base_state[Consts::THIRD] = None;
-        let third_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
+        let third_runner_speed = decider.roll_std_dev_skill_stat(
+            *levels::BASERUNNER_SPEED,
+            third_runner.unwrap().baserunner_run_speed_bias,
+        );
 
         has_thrown = true;
         let run_time = 90.0 / third_runner_speed;
-        let throw_distance =
-            location.distance(Location::home_plate());
+        let throw_distance = location.distance(Location::home_plate());
         let throw_time = throw_distance / fielder_throw_speed;
 
         if run_time > throw_time {
             // Caught at home
-            base_movements.push(
-                BaseMovement {
-                    starting_base: Some(Consts::THIRD),
-                    bases_moved: MoveType::Out(Consts::HOME),
-                }
-            );
+            base_movements.push(BaseMovement {
+                starting_base: Some(Consts::THIRD),
+                bases_moved: MoveType::Out(Consts::HOME),
+            });
             outs_made += 1;
         } else {
             // Scores
-            base_movements.push(
-                BaseMovement {
-                    starting_base: Some(Consts::THIRD),
-                    bases_moved: MoveType::Advanced(1),
-                }
-            );
+            base_movements.push(BaseMovement {
+                starting_base: Some(Consts::THIRD),
+                bases_moved: MoveType::Advanced(1),
+            });
             runs_scored += 1;
         }
     }
 
-    if base_state[Consts::THIRD].is_none() &&
-        base_state[Consts::SECOND].is_some() &&
-        location.distance.0 > 275.0 &&
-        location.direction.0 > 45.0 {
-            // Man on second tags and runs to third
-            let runner = base_state[Consts::SECOND];
-            base_state[Consts::SECOND] = None;
-            let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
+    if base_state[Consts::THIRD].is_none()
+        && base_state[Consts::SECOND].is_some()
+        && location.distance.0 > 275.0
+        && location.direction.0 > 45.0
+    {
+        // Man on second tags and runs to third
+        let runner = base_state[Consts::SECOND];
+        base_state[Consts::SECOND] = None;
+        let second_runner_speed = decider.roll_std_dev_skill_stat(
+            *levels::BASERUNNER_SPEED,
+            second_runner.unwrap().baserunner_run_speed_bias,
+        );
 
-            let run_time = 90.0 / second_runner_speed;
-            let throw_distance =
-                location.distance(Location::third_base());
-            let throw_time = throw_distance / fielder_throw_speed;
+        let run_time = 90.0 / second_runner_speed;
+        let throw_distance = location.distance(Location::third_base());
+        let throw_time = throw_distance / fielder_throw_speed;
 
-            if run_time > throw_time && !has_thrown {
-                // Caught out at third
-                outs_made += 1;
-                base_movements.push(BaseMovement {
-                    starting_base: Some(Consts::SECOND),
-                    bases_moved: MoveType::Out(Consts::THIRD),
-                });
-            } else {
-                base_movements.push(BaseMovement {
-                    starting_base: Some(Consts::SECOND),
-                    bases_moved: MoveType::Advanced(1),
-                });
-                base_state[Consts::THIRD] = runner;
-            }
+        if run_time > throw_time && !has_thrown {
+            // Caught out at third
+            outs_made += 1;
+            base_movements.push(BaseMovement {
+                starting_base: Some(Consts::SECOND),
+                bases_moved: MoveType::Out(Consts::THIRD),
+            });
+        } else {
+            base_movements.push(BaseMovement {
+                starting_base: Some(Consts::SECOND),
+                bases_moved: MoveType::Advanced(1),
+            });
+            base_state[Consts::THIRD] = runner;
+        }
     }
 
     BaseRunningRecord {
@@ -157,7 +169,7 @@ fn post_out_base_running(
             runs_scored,
             batter_hit_type: HitType::Out,
             ending_base_state: base_state,
-        }
+        },
     }
 }
 
@@ -166,6 +178,8 @@ fn post_throw_base_running(
     fielding_play: &FieldingPlay,
     batter_lineup_index: u8,
     base_state: &[Option<u8>; 3],
+    batting_team: &Team,
+    fielding_team: &Team,
     decider: &mut impl Decider,
 ) -> BaseRunningRecord {
     let mut base_movements = Vec::<BaseMovement>::new();
@@ -173,11 +187,32 @@ fn post_throw_base_running(
     let mut outs_made: u8 = 0;
     let mut base_state = base_state.clone();
 
-    let fielder_throw_speed = decider.roll_stat(*levels::THROW_SPEED, Skill::default());
-    let batter_runner_speed =
-        decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-    let batter_box_exit_time =
-        decider.roll_stat(*levels::BOX_EXIT_TIME, Skill::default());
+    let fielder_player = fielding_team.player_at_position(&fielding_play.from);
+    let second_fielder_player = fielding_team.player_at_position(&fielding_play.to);
+    let batter_player = batting_team.player_at_batting_index(batter_lineup_index);
+
+    let first_runner = base_state[Consts::FIRST]
+        .map(|batting_index| batting_team.player_at_batting_index(batting_index));
+    let second_runner = base_state[Consts::SECOND]
+        .map(|batting_index| batting_team.player_at_batting_index(batting_index));
+    let third_runner = base_state[Consts::THIRD]
+        .map(|batting_index| batting_team.player_at_batting_index(batting_index));
+
+    let fielder_throw_speed = decider.roll_std_dev_skill_stat(
+        *levels::THROW_SPEED,
+        fielder_player.fielder_throw_speed_bias,
+    );
+
+    let batter_runner_speed = decider.roll_std_dev_skill_stat(
+        *levels::BASERUNNER_SPEED,
+        batter_player.baserunner_run_speed_bias,
+    );
+    let batter_box_exit_time = decider.roll_std_dev_skill_stat(
+        *levels::BOX_EXIT_TIME,
+        batter_player.baserunner_box_exit_time_bias,
+    );
+    let third_baseman = fielding_team.player_at_position(&Fielder::ThirdBase);
+    let catcher = fielding_team.player_at_position(&Fielder::Catcher);
 
     let batter_hit_type: HitType;
     match fielding_play.base {
@@ -219,10 +254,14 @@ fn post_throw_base_running(
             if base_state[Consts::SECOND].is_some() {
                 let runner = base_state[Consts::SECOND];
                 base_state[Consts::SECOND] = None;
-                let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
+                let second_runner_speed = decider.roll_std_dev_skill_stat(
+                    *levels::BASERUNNER_SPEED,
+                    second_runner.unwrap().baserunner_run_speed_bias,
+                );
 
                 let time_to_home = (90.0 * 2.0) / second_runner_speed;
-                let time_to_throw_home = fielding_play.from_event.location.distance.0 / fielder_throw_speed;
+                let time_to_throw_home =
+                    fielding_play.from_event.location.distance.0 / fielder_throw_speed;
                 if time_to_home > time_to_throw_home && minimum_advance < 3 {
                     // Stays on third
                     base_state[Consts::THIRD] = runner;
@@ -251,7 +290,7 @@ fn post_throw_base_running(
                             starting_base: Some(Consts::FIRST),
                             bases_moved: MoveType::Advanced(1),
                         });
-                    },
+                    }
                     2 | 3 | _ => {
                         runs_scored += 1;
                         base_movements.push(BaseMovement {
@@ -269,31 +308,31 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(1),
                     });
-                },
+                }
                 2 => {
                     base_state[Consts::SECOND] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
                     });
-                },
+                }
                 3 => {
                     base_state[Consts::THIRD] = Some(batter_lineup_index);
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
                     });
-                },
+                }
                 4 => {
                     base_movements.push(BaseMovement {
                         starting_base: None,
                         bases_moved: MoveType::Advanced(4),
                     });
                     runs_scored += 1;
-                },
+                }
                 _ => (),
             }
-        },
+        }
 
         Consts::SECOND => {
             let batter_advanced = batter_advanced(
@@ -307,9 +346,17 @@ fn post_throw_base_running(
                 0 => {
                     if base_state[Consts::FIRST].is_some() {
                         // Force at second
-                        let first_batter_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                        let first_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
-                        let first_to_second_run_time = 90.0 / first_batter_speed + first_takeoff_delay;
+                        let first_batter_speed = decider.roll_std_dev_skill_stat(
+                            *levels::BASERUNNER_SPEED,
+                            first_runner.unwrap().baserunner_run_speed_bias,
+                        );
+                        let first_takeoff_delay = decider.roll_std_dev_skill_stat(
+                            *levels::BASE_TAKEOFF_DELAY,
+                            first_runner.unwrap().baserunner_takeoff_delay_bias,
+                        );
+
+                        let first_to_second_run_time =
+                            90.0 / first_batter_speed + first_takeoff_delay;
                         if first_to_second_run_time > fielding_play.to_event.travel_time.0 {
                             // Player is out at second
                             outs_made += 1;
@@ -318,10 +365,15 @@ fn post_throw_base_running(
                                 bases_moved: MoveType::Out(Consts::SECOND),
                             });
 
-                            let second_fielder_throw_speed = decider.roll_stat(*levels::THROW_SPEED, Skill::default());
+                            let second_fielder_throw_speed = decider.roll_std_dev_skill_stat(
+                                *levels::THROW_SPEED,
+                                second_fielder_player.fielder_throw_speed_bias,
+                            );
                             let batter_run_time = 90.0 / batter_runner_speed + batter_box_exit_time;
                             let double_play_throw_time = 90.0 / second_fielder_throw_speed;
-                            if batter_run_time > fielding_play.to_event.travel_time.0 + double_play_throw_time {
+                            if batter_run_time
+                                > fielding_play.to_event.travel_time.0 + double_play_throw_time
+                            {
                                 // Turns the double play
                                 batter_hit_type = HitType::Out;
 
@@ -384,7 +436,7 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
-                },
+                }
                 1 => {
                     // Batter has time to get to first for sure
                     new_base_state[Consts::FIRST] = Some(batter_lineup_index);
@@ -393,10 +445,19 @@ fn post_throw_base_running(
                         bases_moved: MoveType::Advanced(1),
                     });
 
-                    let first_batter_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                    let first_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
+                    let first_batter_speed = decider.roll_std_dev_skill_stat(
+                        *levels::BASERUNNER_SPEED,
+                        first_runner.unwrap().baserunner_run_speed_bias,
+                    );
+                    let first_takeoff_delay = decider.roll_std_dev_skill_stat(
+                        *levels::BASE_TAKEOFF_DELAY,
+                        first_runner.unwrap().baserunner_takeoff_delay_bias,
+                    );
+
                     let first_to_second_run_time = 90.0 / first_batter_speed + first_takeoff_delay;
-                    if first_to_second_run_time > fielding_play.to_event.travel_time.0 && base_state[Consts::FIRST].is_some() {
+                    if first_to_second_run_time > fielding_play.to_event.travel_time.0
+                        && base_state[Consts::FIRST].is_some()
+                    {
                         // Force at second, player is out at second
                         batter_hit_type = HitType::FieldersChoice;
                         outs_made += 1;
@@ -435,7 +496,7 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
-                },
+                }
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
@@ -468,7 +529,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
                     });
-                },
+                }
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
@@ -501,7 +562,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
                     });
-                },
+                }
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
@@ -537,7 +598,7 @@ fn post_throw_base_running(
                 }
             }
             base_state = new_base_state;
-        },
+        }
         Consts::THIRD => {
             let batter_advanced = batter_advanced(
                 fielding_play.to_event.travel_time.0,
@@ -553,9 +614,17 @@ fn post_throw_base_running(
                         let runner_from_second = base_state[Consts::SECOND];
 
                         // Force at third
-                        let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                        let second_runner_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
-                        let second_to_third_run_time = 90.0 / second_runner_speed + second_runner_takeoff_delay;
+                        let second_runner_speed = decider.roll_std_dev_skill_stat(
+                            *levels::BASERUNNER_SPEED,
+                            second_runner.unwrap().baserunner_run_speed_bias,
+                        );
+                        let second_runner_takeoff_delay = decider.roll_std_dev_skill_stat(
+                            *levels::BASE_TAKEOFF_DELAY,
+                            second_runner.unwrap().baserunner_takeoff_delay_bias,
+                        );
+
+                        let second_to_third_run_time =
+                            90.0 / second_runner_speed + second_runner_takeoff_delay;
                         if second_to_third_run_time > fielding_play.to_event.travel_time.0 {
                             // Player is out at third
                             outs_made += 1;
@@ -564,35 +633,46 @@ fn post_throw_base_running(
                                 bases_moved: MoveType::Out(Consts::THIRD),
                             });
 
-                            let third_baseman_throw_speed = decider.roll_stat(
-                                *levels::THROW_SPEED, Skill::default()
+                            let third_baseman_throw_speed = decider.roll_std_dev_skill_stat(
+                                *levels::THROW_SPEED,
+                                third_baseman.fielder_throw_speed_bias,
                             );
-                            let third_baseman_transfer_time = decider.roll_stat(
-                                *levels::FIELDER_TRANSFER_TIME, Skill::default()
+                            let third_baseman_transfer_time = decider.roll_std_dev_skill_stat(
+                                *levels::FIELDER_TRANSFER_TIME,
+                                third_baseman.fielder_transfer_time_bias,
                             );
-                            let third_to_second_base_throw_time = 90.0 / third_baseman_throw_speed +
-                                third_baseman_transfer_time;
-                            if third_to_second_base_throw_time >
-                                fielding_play.to_event.travel_time.0 + third_to_second_base_throw_time {
+                            let third_to_second_base_throw_time =
+                                90.0 / third_baseman_throw_speed + third_baseman_transfer_time;
+                            if third_to_second_base_throw_time
+                                > fielding_play.to_event.travel_time.0
+                                    + third_to_second_base_throw_time
+                            {
                                 // Double Play at second
                                 outs_made += 1;
                                 base_movements.push(BaseMovement {
                                     starting_base: Some(Consts::FIRST),
                                     bases_moved: MoveType::Out(Consts::SECOND),
                                 });
-                                let second_baseman_throw_speed = decider.roll_stat(
-                                    *levels::THROW_SPEED, Skill::default()
+                                let second_baseman =
+                                    fielding_team.player_at_position(&Fielder::SecondBase);
+                                let second_baseman_throw_speed = decider.roll_std_dev_skill_stat(
+                                    *levels::THROW_SPEED,
+                                    second_baseman.fielder_throw_speed_bias,
                                 );
-                                let second_baseman_transfer_time = decider.roll_stat(
-                                    *levels::FIELDER_TRANSFER_TIME, Skill::default()
+                                let second_baseman_transfer_time = decider.roll_std_dev_skill_stat(
+                                    *levels::FIELDER_TRANSFER_TIME,
+                                    second_baseman.fielder_transfer_time_bias,
                                 );
-                                let second_to_first_base_throw_time = 90.0 / second_baseman_throw_speed +
-                                    second_baseman_transfer_time;
-                                let batter_run_time = 90.0 / batter_runner_speed + batter_box_exit_time;
-                                if batter_run_time >
-                                    fielding_play.to_event.travel_time.0 +
-                                        third_to_second_base_throw_time +
-                                        second_to_first_base_throw_time {
+                                let second_to_first_base_throw_time = 90.0
+                                    / second_baseman_throw_speed
+                                    + second_baseman_transfer_time;
+                                let batter_run_time =
+                                    90.0 / batter_runner_speed + batter_box_exit_time;
+                                if batter_run_time
+                                    > fielding_play.to_event.travel_time.0
+                                        + third_to_second_base_throw_time
+                                        + second_to_first_base_throw_time
+                                {
                                     // Around the horn triple play
                                     batter_hit_type = HitType::Out;
                                     outs_made += 1;
@@ -617,17 +697,21 @@ fn post_throw_base_running(
                                     bases_moved: MoveType::Advanced(1),
                                 });
 
-                                let third_baseman_throw_speed = decider.roll_stat(
-                                    *levels::THROW_SPEED, Skill::default()
+                                let third_baseman_throw_speed = decider.roll_std_dev_skill_stat(
+                                    *levels::THROW_SPEED,
+                                    third_baseman.fielder_throw_speed_bias,
                                 );
-                                let third_baseman_transfer_time = decider.roll_stat(
-                                    *levels::FIELDER_TRANSFER_TIME, Skill::default()
+                                let third_baseman_transfer_time = decider.roll_std_dev_skill_stat(
+                                    *levels::FIELDER_TRANSFER_TIME,
+                                    third_baseman.fielder_transfer_time_bias,
                                 );
                                 let third_to_first_distance = 2.0 * 90.0 / 2.0f64.sqrt();
-                                let third_first_throw_time = third_to_first_distance /
-                                    third_baseman_throw_speed + third_baseman_transfer_time;
+                                let third_first_throw_time = third_to_first_distance
+                                    / third_baseman_throw_speed
+                                    + third_baseman_transfer_time;
 
-                                let batter_run_time = 90.0 / batter_runner_speed + batter_box_exit_time;
+                                let batter_run_time =
+                                    90.0 / batter_runner_speed + batter_box_exit_time;
                                 if batter_run_time > third_first_throw_time {
                                     // Third to First double play
                                     batter_hit_type = HitType::Out;
@@ -683,7 +767,7 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
-                },
+                }
                 1 => {
                     // Batter has time to get to first for sure
                     new_base_state[Consts::FIRST] = Some(batter_lineup_index);
@@ -697,12 +781,20 @@ fn post_throw_base_running(
                         bases_moved: MoveType::Advanced(1),
                     });
 
-                    let second_runner_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                    let second_runner_takeoff_delay = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
-                    let second_to_third_run_time = 90.0 / second_runner_speed + second_runner_takeoff_delay;
-                    if second_to_third_run_time > fielding_play.to_event.travel_time.0 &&
-                            base_state[Consts::SECOND].is_some() &&
-                            base_state[Consts::THIRD].is_some() {
+                    let second_runner_speed = decider.roll_std_dev_skill_stat(
+                        *levels::BASERUNNER_SPEED,
+                        second_runner.unwrap().baserunner_run_speed_bias,
+                    );
+                    let second_runner_takeoff_delay = decider.roll_std_dev_skill_stat(
+                        *levels::BASE_TAKEOFF_DELAY,
+                        second_runner.unwrap().baserunner_takeoff_delay_bias,
+                    );
+                    let second_to_third_run_time =
+                        90.0 / second_runner_speed + second_runner_takeoff_delay;
+                    if second_to_third_run_time > fielding_play.to_event.travel_time.0
+                        && base_state[Consts::SECOND].is_some()
+                        && base_state[Consts::THIRD].is_some()
+                    {
                         // Force at third, player is out at third
                         batter_hit_type = HitType::FieldersChoice;
                         outs_made += 1;
@@ -728,7 +820,7 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
-                },
+                }
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
@@ -761,7 +853,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
                     });
-                },
+                }
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
@@ -794,7 +886,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
                     });
-                },
+                }
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
@@ -843,9 +935,16 @@ fn post_throw_base_running(
                 0 => {
                     if base_state.iter().all(|b| b.is_some()) {
                         // Force at home
-                        let third_to_home_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                        let third_to_home_takeoff = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
-                        let third_to_home_run_time = 90.0 / third_to_home_speed + third_to_home_takeoff;
+                        let third_to_home_speed = decider.roll_std_dev_skill_stat(
+                            *levels::BASERUNNER_SPEED,
+                            third_runner.unwrap().baserunner_run_speed_bias,
+                        );
+                        let third_to_home_takeoff = decider.roll_std_dev_skill_stat(
+                            *levels::BASE_TAKEOFF_DELAY,
+                            third_runner.unwrap().baserunner_takeoff_delay_bias,
+                        );
+                        let third_to_home_run_time =
+                            90.0 / third_to_home_speed + third_to_home_takeoff;
                         if third_to_home_run_time > fielding_play.to_event.travel_time.0 {
                             // Player is out at home
                             outs_made += 1;
@@ -854,15 +953,30 @@ fn post_throw_base_running(
                                 bases_moved: MoveType::Out(Consts::HOME),
                             });
 
-                            let home_to_third_throw_time = decider.roll_stat(*levels::THROW_SPEED, Skill::default());
-                            let home_transfer_time = decider.roll_stat(*levels::FIELDER_TRANSFER_TIME, Skill::default());
-                            let home_to_third_throw_time = 90.0 / home_to_third_throw_time +
-                                home_transfer_time;
+                            let home_to_third_throw_time = decider.roll_std_dev_skill_stat(
+                                *levels::THROW_SPEED,
+                                catcher.fielder_throw_speed_bias,
+                            );
+                            let home_transfer_time = decider.roll_std_dev_skill_stat(
+                                *levels::FIELDER_TRANSFER_TIME,
+                                catcher.fielder_transfer_time_bias,
+                            );
+                            let home_to_third_throw_time =
+                                90.0 / home_to_third_throw_time + home_transfer_time;
 
-                            let second_to_third_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                            let second_to_third_takeoff = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
-                            let second_to_third_run_time = 90.0 / second_to_third_speed + second_to_third_takeoff;
-                            if second_to_third_run_time > fielding_play.to_event.travel_time.0 + home_to_third_throw_time {
+                            let second_to_third_speed = decider.roll_std_dev_skill_stat(
+                                *levels::BASERUNNER_SPEED,
+                                second_runner.unwrap().baserunner_run_speed_bias,
+                            );
+                            let second_to_third_takeoff = decider.roll_std_dev_skill_stat(
+                                *levels::BASE_TAKEOFF_DELAY,
+                                second_runner.unwrap().baserunner_takeoff_delay_bias,
+                            );
+                            let second_to_third_run_time =
+                                90.0 / second_to_third_speed + second_to_third_takeoff;
+                            if second_to_third_run_time
+                                > fielding_play.to_event.travel_time.0 + home_to_third_throw_time
+                            {
                                 // Double Play at third
                                 outs_made += 1;
                                 base_movements.push(BaseMovement {
@@ -870,17 +984,21 @@ fn post_throw_base_running(
                                     bases_moved: MoveType::Out(Consts::THIRD),
                                 });
 
-                                let third_to_first_distance = 2.0 * 90.0 / 2.0f64.sqrt();
-                                let third_to_first_throw_speed = decider.roll_stat(
-                                    *levels::THROW_SPEED, Skill::default()
+                                let third_to_first_distance = 90.0 * 2.0f64.sqrt();
+                                let third_to_first_throw_speed = decider.roll_std_dev_skill_stat(
+                                    *levels::THROW_SPEED,
+                                    third_baseman.fielder_throw_speed_bias,
                                 );
-                                let third_to_first_transfer = decider.roll_stat(
-                                    *levels::FIELDER_TRANSFER_TIME, Skill::default()
+                                let third_to_first_transfer = decider.roll_std_dev_skill_stat(
+                                    *levels::FIELDER_TRANSFER_TIME,
+                                    third_baseman.fielder_transfer_time_bias,
                                 );
-                                let third_to_first_throw_time = third_to_first_distance /
-                                    third_to_first_throw_speed + third_to_first_transfer;
+                                let third_to_first_throw_time = third_to_first_distance
+                                    / third_to_first_throw_speed
+                                    + third_to_first_transfer;
 
-                                let batter_run_time = 90.0 / batter_runner_speed + batter_box_exit_time;
+                                let batter_run_time =
+                                    90.0 / batter_runner_speed + batter_box_exit_time;
                                 if batter_run_time > third_to_first_throw_time {
                                     // 2-5-4 Triple Play
                                     batter_hit_type = HitType::FieldersChoice;
@@ -915,14 +1033,14 @@ fn post_throw_base_running(
                                     bases_moved: MoveType::Advanced(1),
                                 });
 
-                                let home_first_throw_speed = decider.roll_stat(
-                                    *levels::THROW_SPEED, Skill::default()
-                                );
-                                let home_first_transfer = decider.roll_stat(
-                                    *levels::FIELDER_TRANSFER_TIME, Skill::default()
-                                );
-                                let home_first_throw_time = 90.0 / home_first_throw_speed + home_first_transfer;
-                                let batter_run_time = 90.0 / batter_runner_speed + batter_box_exit_time;
+                                let home_first_throw_speed =
+                                    decider.roll_std_dev_skill_stat(*levels::THROW_SPEED, catcher.fielder_throw_speed_bias);
+                                let home_first_transfer = decider
+                                    .roll_std_dev_skill_stat(*levels::FIELDER_TRANSFER_TIME, catcher.fielder_transfer_time_bias);
+                                let home_first_throw_time =
+                                    90.0 / home_first_throw_speed + home_first_transfer;
+                                let batter_run_time =
+                                    90.0 / batter_runner_speed + batter_box_exit_time;
 
                                 if batter_run_time > home_first_throw_time {
                                     // Home to First double play
@@ -994,7 +1112,7 @@ fn post_throw_base_running(
                             });
                         }
                     }
-                },
+                }
                 1 => {
                     // Batter has time to get to first for sure
                     batter_hit_type = HitType::Single;
@@ -1009,8 +1127,10 @@ fn post_throw_base_running(
                     }
 
                     if base_state[Consts::SECOND].is_some() {
-                        let second_run_speed = decider.roll_stat(*levels::BASERUNNER_SPEED, Skill::default());
-                        let second_takeoff = decider.roll_stat(*levels::BASE_TAKEOFF_DELAY, Skill::default());
+                        let second_run_speed =
+                            decider.roll_std_dev_skill_stat(*levels::BASERUNNER_SPEED, second_runner.unwrap().baserunner_run_speed_bias);
+                        let second_takeoff =
+                            decider.roll_std_dev_skill_stat(*levels::BASE_TAKEOFF_DELAY, second_runner.unwrap().baserunner_takeoff_delay_bias);
                         let second_home_run_time = (2.0 * 90.0) / second_run_speed + second_takeoff;
 
                         if second_home_run_time > fielding_play.to_event.travel_time.0 {
@@ -1038,7 +1158,7 @@ fn post_throw_base_running(
                             bases_moved: MoveType::Advanced(1),
                         });
                     }
-                },
+                }
                 2 => {
                     // Batter stretches for a double
                     batter_hit_type = HitType::Double;
@@ -1071,7 +1191,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(2),
                     });
-                },
+                }
                 3 => {
                     // Batter hits a triple
                     batter_hit_type = HitType::Triple;
@@ -1104,7 +1224,7 @@ fn post_throw_base_running(
                         starting_base: None,
                         bases_moved: MoveType::Advanced(3),
                     });
-                },
+                }
                 _ => {
                     // Batter hits an inside the park home run
                     batter_hit_type = HitType::HomeRun;
@@ -1141,7 +1261,7 @@ fn post_throw_base_running(
             }
             base_state = new_base_state;
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     };
 
     BaseRunningRecord {
@@ -1151,7 +1271,7 @@ fn post_throw_base_running(
             runs_scored,
             batter_hit_type,
             ending_base_state: base_state,
-        }
+        },
     }
 }
 
@@ -1159,5 +1279,3 @@ fn batter_advanced(throw_time: f64, baserunner_speed: f64, box_exit_time: f64) -
     let bases_ran = (throw_time * baserunner_speed + box_exit_time) / 90.0;
     bases_ran.trunc() as u8
 }
-
-

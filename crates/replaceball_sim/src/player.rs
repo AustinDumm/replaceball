@@ -115,6 +115,10 @@ pub struct Player {
     pub fielder_reaction_time_bias: i8,
     pub fielder_throw_speed_bias: i8,
     pub fielder_transfer_time_bias: i8,
+
+    pub baserunner_run_speed_bias: i8,
+    pub baserunner_box_exit_time_bias: i8,
+    pub baserunner_takeoff_delay_bias: i8,
 }
 
 impl Default for Player {
@@ -143,6 +147,10 @@ impl Default for Player {
             fielder_reaction_time_bias: 0,
             fielder_throw_speed_bias: 0,
             fielder_transfer_time_bias: 0,
+
+            baserunner_run_speed_bias: 0,
+            baserunner_box_exit_time_bias: 0,
+            baserunner_takeoff_delay_bias: 0,
         }
     }
 }

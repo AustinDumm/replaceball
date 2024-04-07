@@ -104,7 +104,7 @@ impl Decider for ExternalDecider {
 
     fn roll_stat(&mut self, stat: Stat, skill: Skill) -> f64 {
         let sample = gen_normal(
-            stat.average * skill.average_multiplier,
+            stat.average * skill.average_multiplier + skill.average_shift,
             stat.std_dev * skill.std_dev_multiplier,
         );
 
