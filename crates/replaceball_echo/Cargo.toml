@@ -18,5 +18,5 @@ features = ["derive"]
 
 [dependencies.replaceball_sim]
 registry = "local-registry"
-# version = "0.4.0"
+version = "0.5.0"
 path = "../replaceball_sim/"

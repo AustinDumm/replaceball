@@ -72,7 +72,7 @@ impl Decider for ExternalDecider {
         pitch_width_bias: i8,
     ) -> PitchLocation {
         let zone_count = 3;
-        let zone_size = std::i8::MAX;
+        let zone_size = std::i8::MAX as i16;
         let full_range = zone_count * zone_size;
 
         let width = match (gen_range(0, full_range as u64)
