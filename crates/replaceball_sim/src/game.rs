@@ -32,15 +32,15 @@ pub fn simulate_game(
 ) -> GameRecord {
     simulate_game_with_teams(
         decider,
-        Default::default(),
-        Default::default(),
+        &Default::default(),
+        &Default::default(),
     )
 }
 
 pub fn simulate_game_with_teams(
     decider: &mut impl Decider,
-    home_team: Team,
-    away_team: Team,
+    home_team: &Team,
+    away_team: &Team,
 ) -> GameRecord {
     let mut away_score: Score = 0;
     let mut away_hits: u16 = 0;

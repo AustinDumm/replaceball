@@ -1,4 +1,4 @@
-use std::ops::{RangeInclusive, Div, Mul, Add, Sub};
+use std::{f64::consts::PI, ops::{Add, Div, Mul, RangeInclusive, Sub}};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ impl HitDirection {
         let result = Self(decider.roll_uniform(0.0..Self::MAX_ANGLE));
         let biased_result = result.0 + Self::MAX_BIAS_ANGLE * (hitter_bias as f64 / std::i8::MAX as f64);
 
-        HitDirection(clamp(biased_result, 0.0..=Self::MAX_ANGLE))
+        HitDirection(clamp(biased_result, 0.0001..=Self::MAX_ANGLE))
     }
 }
 
@@ -182,24 +182,26 @@ impl Cartesian {
         let first_angle = if first_sin < -1.0 { -1.0 } else if 1.0 < first_sin { 1.0 } else { first_sin }
             .asin();
         let first_time = (self.1 - ball_location.1) / (ball_speed * (ball_angle.sin() - first_angle.sin()));
+        let first_time = if first_time < 0.0 || first_time > 20.0 { std::f64::NAN } else { first_time };
 
         let second_result = (-b + discriminant.sqrt()) / 2.0 * a;
         let second_sin = ((ball_speed * ball_angle.sin()) + second_result * self_ball_angle.sin()) / speed;
         let second_angle = if second_sin < -1.0 { -1.0 } else if 1.0 < second_sin { 1.0 } else { second_sin }
             .asin();
         let second_time = (self.1 - ball_location.1) / (ball_speed * (ball_angle.sin() - second_angle.sin()));
+        let second_time = if second_time < 0.0 || second_time > 20.0 { std::f64::NAN } else { second_time };
 
         let (faster_angle, faster_time) = if first_time < second_time {
             (first_angle, first_time)
         } else {
             (second_angle, second_time)
         };
+
         if faster_angle.is_nan() || faster_time.is_nan() {
-            panic!("{}, {}", faster_angle, faster_time)
+            return None
         }
         let player_move_vector = Cartesian(faster_angle.cos(), faster_angle.sin()) * speed * faster_time;
         let fielding_vector = self + player_move_vector;
-        
         
         Some(fielding_vector.into())
     }
@@ -209,7 +211,7 @@ impl From<Location> for Cartesian {
     fn from(value: Location) -> Self {
         Cartesian(
             value.direction.0.to_radians().cos() * value.distance.0,
-            value.direction.0.to_radians().sin()
+            value.direction.0.to_radians().sin() * value.distance.0,
         )
     }
 }

@@ -27,7 +27,7 @@ pub mod prelude {
         levels,
         location::{self, *},
         pitch::{PitchHeight, PitchLocation, PitchOutcome, PitchRecord, PitchWidth},
-        player::Player,
+        player::{Player, Team},
         stat::{Skill, Stat},
         Decider, Score,
     };
@@ -35,7 +35,7 @@ pub mod prelude {
 
 use std::ops::Range;
 
-pub use {game::simulate_game, stat::*};
+pub use {game::simulate_game, game::simulate_game_with_teams, stat::*};
 
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "wasm")]

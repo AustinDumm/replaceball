@@ -6,6 +6,8 @@ use rand_distr::{Distribution, Normal};
 
 use replaceball_sim::{self, prelude::*};
 
+use crate::avg::Avg;
+
 mod avg;
 mod sim;
 
@@ -14,12 +16,13 @@ enum Mode {
     Sim,
     Debug,
     Avg,
+    AvgTeams,
 }
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, value_enum, default_value_t = Mode::Sim)]
+    #[arg(short, long, value_enum, default_value_t = Mode::AvgTeams)]
     mode: Mode,
 }
 
@@ -45,7 +48,18 @@ fn main() {
             let games_count = 10_000;
             let averages = avg::sim_for_averages(games_count, &mut decider);
 
-            println!("{:#?}", averages);
+            print_averages(averages, games_count);
+        },
+        Mode::AvgTeams => {
+            let games_count = 10_000;
+            let averages = avg::sim_for_averages_biased(games_count, &mut decider);
+
+            print_averages(averages, games_count);
+        },
+    }
+
+    fn print_averages(averages: Avg, games_count: u64) {
+        println!("{:#?}", averages);
             println!(
                 "Home Win Pct: {}",
                 averages.home_wins as f64 / (games_count as f64)
@@ -119,7 +133,6 @@ fn main() {
                 averages.strikes as f64 / pitches as f64
             );
             println!("Fouls / Pitch: {}", averages.fouls as f64 / pitches as f64);
-        }
     }
 }
 
@@ -147,7 +160,7 @@ impl Decider for RandomDecider {
         pitch_width_bias: i8,
     ) -> PitchLocation {
         let zone_count = 3;
-        let zone_size = std::i8::MAX as i16;
+        let zone_size = -(std::i8::MIN as i16);
         let full_range = zone_count * zone_size;
 
         let width = match (self.rand.gen_range(0..full_range as u64)
@@ -156,8 +169,8 @@ impl Decider for RandomDecider {
         {
             0 => PitchWidth::Left,
             1 => PitchWidth::Center,
-            2 => PitchWidth::Right,
-            _ => unreachable!(),
+            2 | 3 => PitchWidth::Right,
+            i => unreachable!("Value: {}", i),
         };
 
         let height = match (self.rand.gen_range(0..full_range as u64)
@@ -166,8 +179,8 @@ impl Decider for RandomDecider {
         {
             0 => PitchHeight::High,
             1 => PitchHeight::Middle,
-            2 => PitchHeight::Low,
-            _ => unreachable!(),
+            2 | 3 => PitchHeight::Low,
+            i => unreachable!("Value: {}", i),
         };
 
         PitchLocation { width, height }
@@ -179,7 +192,7 @@ impl Decider for RandomDecider {
 
     fn roll_stat(&mut self, stat: Stat, skill: Skill) -> f64 {
         let distr = Normal::new(
-            stat.average * skill.average_multiplier,
+            stat.average * skill.average_multiplier + skill.average_shift,
             stat.std_dev * skill.std_dev_multiplier,
         )
         .expect("Failed to create normal distribution");
@@ -196,7 +209,7 @@ impl Decider for RandomDecider {
     }
 
     fn flip(&mut self, probability: f64, bias: i8) -> bool {
-        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64)) < probability
+        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 10.0)) < probability
     }
 
     fn roll_uniform(&mut self, range: std::ops::Range<f64>) -> f64 {

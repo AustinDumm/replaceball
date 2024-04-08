@@ -5,8 +5,8 @@ use ts_rs::TS;
 use crate::Fielder;
 
 pub struct Team {
-    fielders: [Player; 9],
-    batting_order: [Fielder; 9],
+    pub fielders: [Player; 9],
+    pub batting_order: [Fielder; 9],
 }
 
 impl Default for Team {

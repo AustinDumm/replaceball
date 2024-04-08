@@ -29,6 +29,7 @@ pub struct HalfInningOutcome {
     pub total_hits: u8,
 }
 
+const MAX_AT_BATS_PER_INNING: usize = 27;
 pub fn simulate_half_inning(
     starting_index: u8,
     batting_team: &Team,
@@ -39,7 +40,7 @@ pub fn simulate_half_inning(
     let mut at_bats = Vec::<(AtBatRecord, HalfInningProgress)>::new();
 
     let mut batting_index = starting_index;
-    while state.outs_remaining > 0 {
+    while state.outs_remaining > 0 && at_bats.len() < MAX_AT_BATS_PER_INNING {
         let at_bat_record = simulate_at_bat(
             batting_index,
             batting_team,
