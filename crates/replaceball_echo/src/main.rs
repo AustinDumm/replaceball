@@ -45,13 +45,13 @@ fn main() {
         }
         Mode::Debug => println!("{:#?}", game_record),
         Mode::Avg => {
-            let games_count = 10_000;
+            let games_count = 100_000;
             let averages = avg::sim_for_averages(games_count, &mut decider);
 
             print_averages(averages, games_count);
         },
         Mode::AvgTeams => {
-            let games_count = 10_000;
+            let games_count = 100_000;
             let averages = avg::sim_for_averages_biased(games_count, &mut decider);
 
             print_averages(averages, games_count);

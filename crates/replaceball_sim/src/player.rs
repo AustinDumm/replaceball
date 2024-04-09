@@ -99,6 +99,18 @@ pub struct Player {
     pub pitch_width_bias: i8,
     pub pitch_strike_bias: i8,
 
+    pub pitcher_swing_on_ball_bias: i8,
+    pub pitcher_contact_on_ball_bias: i8,
+    pub pitcher_foul_on_ball_contact_bias: i8,
+
+    pub pitcher_swing_on_strike_bias: i8,
+    pub pitcher_contact_on_strike_bias: i8,
+    pub pitcher_foul_on_strike_contact_bias: i8,
+
+    pub pitcher_hit_direction_bias: i8,
+    pub pitcher_launch_angle_bias: i8,
+    pub pitcher_hit_speed_bias: i8,
+
     pub hitter_swing_on_ball_bias: i8,
     pub hitter_contact_on_ball_bias: i8,
     pub hitter_foul_on_ball_contact_bias: i8,
@@ -130,6 +142,18 @@ impl Default for Player {
             pitch_height_bias: 0,
             pitch_width_bias: 0,
             pitch_strike_bias: 0,
+
+            pitcher_swing_on_ball_bias: 0,
+            pitcher_contact_on_ball_bias: 0,
+            pitcher_foul_on_ball_contact_bias: 0,
+
+            pitcher_swing_on_strike_bias: 0,
+            pitcher_contact_on_strike_bias: 0,
+            pitcher_foul_on_strike_contact_bias: 0,
+
+            pitcher_hit_direction_bias: 0,
+            pitcher_launch_angle_bias: 0,
+            pitcher_hit_speed_bias: 0,
 
             hitter_swing_on_ball_bias: 0,
             hitter_contact_on_ball_bias: 0,

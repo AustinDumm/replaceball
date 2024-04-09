@@ -96,8 +96,8 @@ pub enum HitType {
 }
 
 pub fn simulate_hit(
-    _pitch_location: &PitchLocation,
-    _is_ball: bool,
+    pitch_location: &PitchLocation,
+    is_ball: bool,
     batter_lineup_index: u8,
     batting_team: &Team,
     fielding_team: &Team,
@@ -105,13 +105,29 @@ pub fn simulate_hit(
     base_state: &[Option<u8>; 3],
 ) -> HitRecord {
     let batter = batting_team.player_at_batting_index(batter_lineup_index);
-    let direction = HitDirection::from_decider(decider, batter.hitter_hit_direction_bias);
+    let pitch_width_bias = match pitch_location.width {
+        PitchWidth::Left => -42,
+        PitchWidth::Center => 0,
+        PitchWidth::Right => 42,
+    };
+    let direction = HitDirection::from_decider(decider, batter.hitter_hit_direction_bias.saturating_sub(fielding_team.pitcher().pitcher_hit_direction_bias).saturating_sub(pitch_width_bias));
 
-    let launch_angle = LaunchAngle::from_decider(decider, batter.hitter_launch_angle_bias);
+    let pitch_height_bias = match pitch_location.height {
+        PitchHeight::High => -20,
+        PitchHeight::Middle => 0,
+        PitchHeight::Low => 20,
+    };
+    let launch_angle = LaunchAngle::from_decider(decider, batter.hitter_launch_angle_bias.saturating_sub(fielding_team.pitcher().pitcher_launch_angle_bias).saturating_sub(pitch_height_bias));
+
+    let is_ball_bias = if is_ball {
+        -30
+    } else {
+        0
+    };
     let exit_speed = Speed::from_decider(
         decider,
         *levels::HIT_EXIT_SPEED,
-        batter.hitter_hit_speed_bias
+        batter.hitter_hit_speed_bias.saturating_sub(fielding_team.pitcher().pitcher_hit_speed_bias).saturating_sub(is_ball_bias)
     );
 
     // Let misses on average launch angle drop exit speed to simulate missing the "sweet spot"

@@ -73,18 +73,18 @@ pub fn simulate_pitch(
                 location
             };
 
-        if decider.flip(*levels::SWINGS_PER_BALL, batter.hitter_swing_on_ball_bias) {
+        if decider.flip(*levels::SWINGS_PER_BALL, batter.hitter_swing_on_ball_bias.saturating_sub(pitcher.pitcher_swing_on_ball_bias)) {
             // Swings anyways
 
             if decider.flip(
                 *levels::CONTACTS_PER_BALL_SWING,
-                batter.hitter_contact_on_ball_bias,
+                batter.hitter_contact_on_ball_bias.saturating_sub(pitcher.pitcher_contact_on_ball_bias),
             ) {
                 // Makes contact
 
                 if decider.flip(
                     *levels::FOULS_PER_BALL_CONTACT,
-                    batter.hitter_foul_on_ball_contact_bias,
+                    batter.hitter_foul_on_ball_contact_bias.saturating_sub(pitcher.pitcher_foul_on_ball_contact_bias),
                 ) {
                     // Fouls it off
                     PitchRecord {
@@ -117,19 +117,19 @@ pub fn simulate_pitch(
 
         if decider.flip(
             *levels::SWINGS_PER_STRIKE,
-            batter.hitter_swing_on_strike_bias,
+            batter.hitter_swing_on_strike_bias.saturating_sub(pitcher.pitcher_swing_on_strike_bias),
         ) {
             // Swung at the strike
 
             if decider.flip(
                 *levels::CONTACTS_PER_STRIKE_SWING,
-                batter.hitter_contact_on_strike_bias,
+                batter.hitter_contact_on_strike_bias.saturating_sub(pitcher.pitcher_contact_on_strike_bias),
             ) {
                 // Made contact
 
                 if decider.flip(
                     *levels::FOULS_PER_STRIKE_CONTACT,
-                    batter.hitter_foul_on_strike_contact_bias,
+                    batter.hitter_foul_on_strike_contact_bias.saturating_sub(pitcher.pitcher_foul_on_strike_contact_bias),
                 ) {
                     // Foul ball
                     PitchRecord {

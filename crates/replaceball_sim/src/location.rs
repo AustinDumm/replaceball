@@ -25,7 +25,7 @@ impl HitDirection {
         let result = Self(decider.roll_uniform(0.0..Self::MAX_ANGLE));
         let biased_result = result.0 + Self::MAX_BIAS_ANGLE * (hitter_bias as f64 / std::i8::MAX as f64);
 
-        HitDirection(clamp(biased_result, 0.0001..=Self::MAX_ANGLE))
+        HitDirection(clamp(biased_result, 0.0..=Self::MAX_ANGLE))
     }
 }
 
