@@ -209,7 +209,7 @@ impl Decider for RandomDecider {
     }
 
     fn flip(&mut self, probability: f64, bias: i8) -> bool {
-        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 7.0)) < probability
+        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 4.0)) < probability
     }
 
     fn roll_uniform(&mut self, range: std::ops::Range<f64>) -> f64 {

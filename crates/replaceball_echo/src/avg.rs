@@ -785,8 +785,8 @@ fn sum_game_stats(game: &GameRecord) -> Avg {
     game.innings
         .iter()
         .map(|inning| {
-            [&inning.0.away, &inning.0.home]
-            //[&inning.0.home]
+            //[&inning.0.away, &inning.0.home]
+            [&inning.0.home]
             //[&inning.0.away]
                 .iter()
                 .map(|half_inning| {
