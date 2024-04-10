@@ -37,12 +37,12 @@ impl Default for Skill {
 }
 
 impl Skill {
-    pub fn std_dev_bias_skill(bias: i8, stat: Stat) -> Self {
+    pub fn std_dev_bias_skill(bias: i8, stat: Stat, std_mult: f64) -> Self {
         let bias_percent = -bias as f64 / std::i8::MIN as f64;
 
         Self {
             average_multiplier: 1.0,
-            average_shift: bias_percent * stat.std_dev,
+            average_shift: bias_percent * stat.std_dev * std_mult,
             std_dev_multiplier: 1.0,
         }
     }

@@ -45,13 +45,13 @@ fn main() {
         }
         Mode::Debug => println!("{:#?}", game_record),
         Mode::Avg => {
-            let games_count = 100_000;
+            let games_count = 10_000;
             let averages = avg::sim_for_averages(games_count, &mut decider);
 
             print_averages(averages, games_count);
         },
         Mode::AvgTeams => {
-            let games_count = 100_000;
+            let games_count = 10_000;
             let averages = avg::sim_for_averages_biased(games_count, &mut decider);
 
             print_averages(averages, games_count);
@@ -209,7 +209,7 @@ impl Decider for RandomDecider {
     }
 
     fn flip(&mut self, probability: f64, bias: i8) -> bool {
-        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 10.0)) < probability
+        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 7.0)) < probability
     }
 
     fn roll_uniform(&mut self, range: std::ops::Range<f64>) -> f64 {

@@ -211,6 +211,10 @@ fn post_throw_base_running(
         *levels::BOX_EXIT_TIME,
         batter_player.baserunner_box_exit_time_bias,
     );
+    let batter_base_rounding_time = decider.roll_std_dev_skill_stat(
+        *levels::BASERUNNER_ROUNDING_TIME,
+        batter_player.baserunner_rounding_time_bias,
+    );
     let third_baseman = fielding_team.player_at_position(&Fielder::ThirdBase);
     let catcher = fielding_team.player_at_position(&Fielder::Catcher);
 
@@ -233,6 +237,7 @@ fn post_throw_base_running(
                     fielding_play.to_event.travel_time.0,
                     batter_runner_speed,
                     batter_box_exit_time,
+                    batter_base_rounding_time,
                 );
                 match minimum_advance {
                     1 => batter_hit_type = HitType::Single,
@@ -339,6 +344,7 @@ fn post_throw_base_running(
                 fielding_play.to_event.travel_time.0,
                 batter_runner_speed,
                 batter_box_exit_time,
+                batter_base_rounding_time,
             );
 
             let mut new_base_state = [None; 3];
@@ -604,6 +610,7 @@ fn post_throw_base_running(
                 fielding_play.to_event.travel_time.0,
                 batter_runner_speed,
                 batter_box_exit_time,
+                batter_base_rounding_time,
             );
 
             let mut new_base_state = [None; 3];
@@ -928,6 +935,7 @@ fn post_throw_base_running(
                 fielding_play.to_event.travel_time.0,
                 batter_runner_speed,
                 batter_box_exit_time,
+                batter_base_rounding_time,
             );
 
             let mut new_base_state = [None; 3];
@@ -1033,10 +1041,14 @@ fn post_throw_base_running(
                                     bases_moved: MoveType::Advanced(1),
                                 });
 
-                                let home_first_throw_speed =
-                                    decider.roll_std_dev_skill_stat(*levels::THROW_SPEED, catcher.fielder_throw_speed_bias);
-                                let home_first_transfer = decider
-                                    .roll_std_dev_skill_stat(*levels::FIELDER_TRANSFER_TIME, catcher.fielder_transfer_time_bias);
+                                let home_first_throw_speed = decider.roll_std_dev_skill_stat(
+                                    *levels::THROW_SPEED,
+                                    catcher.fielder_throw_speed_bias,
+                                );
+                                let home_first_transfer = decider.roll_std_dev_skill_stat(
+                                    *levels::FIELDER_TRANSFER_TIME,
+                                    catcher.fielder_transfer_time_bias,
+                                );
                                 let home_first_throw_time =
                                     90.0 / home_first_throw_speed + home_first_transfer;
                                 let batter_run_time =
@@ -1127,10 +1139,14 @@ fn post_throw_base_running(
                     }
 
                     if base_state[Consts::SECOND].is_some() {
-                        let second_run_speed =
-                            decider.roll_std_dev_skill_stat(*levels::BASERUNNER_SPEED, second_runner.unwrap().baserunner_run_speed_bias);
-                        let second_takeoff =
-                            decider.roll_std_dev_skill_stat(*levels::BASE_TAKEOFF_DELAY, second_runner.unwrap().baserunner_takeoff_delay_bias);
+                        let second_run_speed = decider.roll_std_dev_skill_stat(
+                            *levels::BASERUNNER_SPEED,
+                            second_runner.unwrap().baserunner_run_speed_bias,
+                        );
+                        let second_takeoff = decider.roll_std_dev_skill_stat(
+                            *levels::BASE_TAKEOFF_DELAY,
+                            second_runner.unwrap().baserunner_takeoff_delay_bias,
+                        );
                         let second_home_run_time = (2.0 * 90.0) / second_run_speed + second_takeoff;
 
                         if second_home_run_time > fielding_play.to_event.travel_time.0 {
@@ -1275,7 +1291,18 @@ fn post_throw_base_running(
     }
 }
 
-fn batter_advanced(throw_time: f64, baserunner_speed: f64, box_exit_time: f64) -> u8 {
-    let bases_ran = (throw_time * baserunner_speed + box_exit_time) / 90.0;
-    bases_ran.trunc() as u8
+fn batter_advanced(throw_time: f64, baserunner_speed: f64, box_exit_time: f64, base_rounding_time: f64) -> u8 {
+    let run_time = throw_time * baserunner_speed - box_exit_time;
+    let bases_ran = run_time / 90.0;
+    let bases_tried = bases_ran.trunc();
+    let bases_rounding_time = bases_tried * base_rounding_time;
+
+    let bases_ran = (run_time - bases_rounding_time) / 90.0;
+    let result = bases_ran.trunc();
+
+    if result < 1.0 {
+        1
+    } else {
+        result as u8
+    }
 }

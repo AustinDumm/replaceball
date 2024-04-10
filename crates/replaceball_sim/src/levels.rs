@@ -31,31 +31,37 @@ lazy_static! {
     pub static ref HIT_EXIT_SPEED: Stat = Stat {
         average: *HIT_AVERAGE_SPEED,
         std_dev: 35.0,
-        range: (1.0, 2.0 * *HIT_AVERAGE_SPEED),
+        range: (1.0, 1.5 * *HIT_AVERAGE_SPEED),
     };
 
     pub static ref HIT_LAUNCH_ANGLE: Stat = Stat {
         average: 0.0,
-        std_dev: 45.0,
+        std_dev: 55.0,
         range: (-85.0, 85.0),
     };
 
     /// In feet per second
     pub static ref BASERUNNER_SPEED: Stat = Stat {
-        average: 23.0,
+        average: 25.0,
         std_dev: 4.0,
         range: (0.0, 40.0),
     };
 
+    pub static ref BASERUNNER_ROUNDING_TIME: Stat = Stat {
+        average: 2.0,
+        std_dev: 0.35,
+        range: (0.5, 3.5),
+    };
+
     pub static ref FIELDER_SPEED: Stat = Stat {
         average: 45.0,
-        std_dev: 4.0,
-        range: (20.0, 80.0),
+        std_dev: 8.0,
+        range: (20.0, 100.0),
     };
 
     pub static ref THROW_SPEED: Stat = Stat {
-        average: 60.00,
-        std_dev: 7.0,
+        average: 65.00,
+        std_dev: 10.0,
         range: (0.0, 150.0),
     };
 
@@ -68,7 +74,7 @@ lazy_static! {
 
     pub static ref FIELDER_TRANSFER_TIME: Stat = Stat {
         average: 1.5,
-        std_dev: 0.2,
+        std_dev: 1.0,
         range: (1.0, 3.0),
     };
 

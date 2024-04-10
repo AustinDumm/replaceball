@@ -31,27 +31,6 @@ impl LaunchAngle {
 /// Everything is in feet per second
 pub struct Speed(pub f64);
 
-impl Speed {
-    const SPEED_MAX_BIAS_MULT: f64 = 1.333;
-    const SPEED_MIN_BIAS_MULT: f64 = 0.667;
-
-    pub fn from_decider(decider: &mut impl Decider, stat: Stat, bias: i8) -> Self {
-        let positive_bias = (bias as i16 - std::i8::MIN as i16) as u8;
-        let mult_width = Self::SPEED_MAX_BIAS_MULT - Self::SPEED_MIN_BIAS_MULT;
-        let mult =
-            (positive_bias as f64 / std::u8::MAX as f64) * mult_width + Self::SPEED_MIN_BIAS_MULT;
-
-        Self(decider.roll_stat(
-            stat,
-            Skill {
-                average_multiplier: mult,
-                average_shift: 0.0,
-                std_dev_multiplier: 1.0,
-            },
-        ))
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, TS)]
 #[ts(export)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -110,24 +89,35 @@ pub fn simulate_hit(
         PitchWidth::Center => 0,
         PitchWidth::Right => 42,
     };
-    let direction = HitDirection::from_decider(decider, batter.hitter_hit_direction_bias.saturating_sub(fielding_team.pitcher().pitcher_hit_direction_bias).saturating_sub(pitch_width_bias));
+    let direction = HitDirection::from_decider(
+        decider,
+        batter
+            .hitter_hit_direction_bias
+            .saturating_sub(fielding_team.pitcher().pitcher_hit_direction_bias)
+            .saturating_sub(pitch_width_bias),
+    );
 
     let pitch_height_bias = match pitch_location.height {
         PitchHeight::High => -20,
         PitchHeight::Middle => 0,
         PitchHeight::Low => 20,
     };
-    let launch_angle = LaunchAngle::from_decider(decider, batter.hitter_launch_angle_bias.saturating_sub(fielding_team.pitcher().pitcher_launch_angle_bias).saturating_sub(pitch_height_bias));
-
-    let is_ball_bias = if is_ball {
-        -30
-    } else {
-        0
-    };
-    let exit_speed = Speed::from_decider(
+    let launch_angle = LaunchAngle::from_decider(
         decider,
+        batter
+            .hitter_launch_angle_bias
+            .saturating_sub(fielding_team.pitcher().pitcher_launch_angle_bias)
+            .saturating_sub(pitch_height_bias),
+    );
+
+    let is_ball_bias = if is_ball { -30 } else { 0 };
+    let exit_speed = decider.roll_std_dev_mult_skill_stat(
         *levels::HIT_EXIT_SPEED,
-        batter.hitter_hit_speed_bias.saturating_sub(fielding_team.pitcher().pitcher_hit_speed_bias).saturating_sub(is_ball_bias)
+        batter
+            .hitter_hit_speed_bias
+            .saturating_sub(fielding_team.pitcher().pitcher_hit_speed_bias)
+            .saturating_sub(is_ball_bias),
+            1.5,
     );
 
     // Let misses on average launch angle drop exit speed to simulate missing the "sweet spot"
@@ -135,7 +125,7 @@ pub fn simulate_hit(
         ((launch_angle.0 - levels::HIT_LAUNCH_ANGLE.average).abs() - 2.0) / 200.0,
         0.0..=0.25,
     );
-    let exit_speed = Speed(exit_speed.0 * (1.0 - launch_error));
+    let exit_speed = Speed(exit_speed * (1.0 - launch_error));
 
     HitRecord {
         direction,

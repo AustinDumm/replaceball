@@ -84,8 +84,8 @@ impl Add for Avg {
     }
 }
 
-const AWAY_SKILL_BASE: i8 = -128;
-const HOME_SKILL_BASE: i8 = 127;
+const AWAY_SKILL_BASE: i8 = 0;
+const HOME_SKILL_BASE: i8 = 0;
 
 pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Avg {
     let away_team = Team {
@@ -119,6 +119,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -151,6 +152,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -183,6 +185,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -215,6 +218,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -247,6 +251,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -279,6 +284,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -311,6 +317,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -343,6 +350,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -375,6 +383,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: AWAY_SKILL_BASE,
                 fielder_transfer_time_bias: AWAY_SKILL_BASE,
                 baserunner_run_speed_bias: AWAY_SKILL_BASE,
+                baserunner_rounding_time_bias: AWAY_SKILL_BASE,
                 baserunner_box_exit_time_bias: AWAY_SKILL_BASE,
                 baserunner_takeoff_delay_bias: AWAY_SKILL_BASE,
             },
@@ -422,6 +431,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -454,6 +464,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -486,6 +497,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -518,6 +530,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -550,6 +563,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -582,6 +596,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -614,6 +629,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -646,6 +662,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -678,6 +695,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
                 fielder_throw_speed_bias: HOME_SKILL_BASE,
                 fielder_transfer_time_bias: HOME_SKILL_BASE,
                 baserunner_run_speed_bias: HOME_SKILL_BASE,
+                baserunner_rounding_time_bias: HOME_SKILL_BASE,
                 baserunner_box_exit_time_bias: HOME_SKILL_BASE,
                 baserunner_takeoff_delay_bias: HOME_SKILL_BASE,
             },
@@ -739,6 +757,8 @@ fn count_totals(game: &GameRecord) -> Avg {
             0
         },
         runs: (game.outcome.home_score + game.outcome.away_score) as u64,
+        //runs: (game.outcome.home_score) as u64,
+        //runs: (game.outcome.away_score) as u64,
         hits: 0,
 
         double_plays: 0,
@@ -766,6 +786,8 @@ fn sum_game_stats(game: &GameRecord) -> Avg {
         .iter()
         .map(|inning| {
             [&inning.0.away, &inning.0.home]
+            //[&inning.0.home]
+            //[&inning.0.away]
                 .iter()
                 .map(|half_inning| {
                     half_inning

@@ -152,7 +152,10 @@ pub trait Decider {
 
     fn roll_stat(&mut self, stat: Stat, skill: Skill) -> f64;
     fn roll_std_dev_skill_stat(&mut self, stat: Stat, bias: i8) -> f64 {
-        self.roll_stat(stat, Skill::std_dev_bias_skill(bias, stat))
+        self.roll_std_dev_mult_skill_stat(stat, bias, 1.0)
+    }
+    fn roll_std_dev_mult_skill_stat(&mut self, stat: Stat, bias: i8, std_dev_mult: f64) -> f64 {
+        self.roll_stat(stat, Skill::std_dev_bias_skill(bias, stat, std_dev_mult))
     }
 }
 
