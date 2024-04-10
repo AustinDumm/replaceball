@@ -213,7 +213,7 @@ fn post_throw_base_running(
     );
     let batter_base_rounding_time = decider.roll_std_dev_skill_stat(
         *levels::BASERUNNER_ROUNDING_TIME,
-        batter_player.baserunner_rounding_time_bias,
+        -(batter_player.baserunner_rounding_time_bias.saturating_add(1)),
     );
     let third_baseman = fielding_team.player_at_position(&Fielder::ThirdBase);
     let catcher = fielding_team.player_at_position(&Fielder::Catcher);
