@@ -48,19 +48,19 @@ lazy_static! {
     };
 
     pub static ref BASERUNNER_ROUNDING_TIME: Stat = Stat {
-        average: 2.0,
+        average: 2.75,
         std_dev: 0.35,
         range: (0.5, 3.5),
     };
 
     pub static ref FIELDER_SPEED: Stat = Stat {
-        average: 45.0,
+        average: 30.0,
         std_dev: 8.0,
-        range: (20.0, 100.0),
+        range: (10.0, 70.0),
     };
 
     pub static ref THROW_SPEED: Stat = Stat {
-        average: 65.00,
+        average: 55.00,
         std_dev: 10.0,
         range: (0.0, 150.0),
     };
@@ -73,7 +73,7 @@ lazy_static! {
     };
 
     pub static ref FIELDER_TRANSFER_TIME: Stat = Stat {
-        average: 1.5,
+        average: 1.0,
         std_dev: 1.0,
         range: (1.0, 3.0),
     };

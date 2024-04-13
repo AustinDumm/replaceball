@@ -95,7 +95,7 @@ pub fn sim_for_averages_biased(sim_count: u64, decider: &mut impl Decider) -> Av
     let progress_mod = sim_count / progress_divisor;
     let mut no_hitters = 0;
     for count in 0..sim_count {
-        let game = replaceball_sim::simulate_game_with_teams(decider, &home_team(), &away_team());
+        let game = replaceball_sim::simulate_game_with_teams(decider, &Team::default(), &Team::default());
         running_totals += count_totals(&game);
         if count % progress_mod == 0 {
             println!("Completed: {:3}%", count / progress_mod);

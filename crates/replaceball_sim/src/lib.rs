@@ -81,8 +81,8 @@ impl Decider for ExternalDecider {
         {
             0 => PitchWidth::Left,
             1 => PitchWidth::Center,
-            2 => PitchWidth::Right,
-            _ => unreachable!(),
+            2 | 3 => PitchWidth::Right,
+            i => unreachable!("Pitch location width: {}", i),
         };
 
         let height = match (gen_range(0, full_range as u64)
@@ -91,8 +91,8 @@ impl Decider for ExternalDecider {
         {
             0 => PitchHeight::High,
             1 => PitchHeight::Middle,
-            2 => PitchHeight::Low,
-            _ => unreachable!(),
+            2 | 3 => PitchHeight::Low,
+            i => unreachable!("Pitch location height: {}", i),
         };
 
         PitchLocation { width, height }
