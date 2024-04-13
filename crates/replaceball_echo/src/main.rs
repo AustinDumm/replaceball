@@ -10,6 +10,7 @@ use crate::avg::Avg;
 
 mod avg;
 mod sim;
+mod team;
 
 #[derive(Clone, Debug, ValueEnum)]
 enum Mode {
