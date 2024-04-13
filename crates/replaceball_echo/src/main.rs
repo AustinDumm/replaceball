@@ -2,9 +2,9 @@ use std::{thread, time::Duration};
 
 use clap::{Parser, ValueEnum};
 use rand::prelude::*;
-use rand_distr::{Distribution, Normal};
+use rand_distr::Normal;
 
-use replaceball_sim::{self, prelude::*};
+use replaceball_sim::prelude::*;
 
 use crate::avg::Avg;
 

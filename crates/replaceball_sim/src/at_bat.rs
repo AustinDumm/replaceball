@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    hit::simulate_hit, pitch::simulate_pitch, player::Team, prelude::*
+    hit::simulate_hit, pitch::simulate_pitch, prelude::*
 };
 
 
@@ -12,7 +12,6 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtBatRecord {
     pub batter_index: u8,
-    pub player: Player,
     pub pitches: Box<[(PitchRecord, AtBatProgress)]>,
     pub outcome: AtBatOutcome,
 }
@@ -86,7 +85,6 @@ pub fn simulate_at_bat(
 
     AtBatRecord {
         batter_index,
-        player: batter.clone(),
         pitches: pitches.into_boxed_slice(),
         outcome,
     }

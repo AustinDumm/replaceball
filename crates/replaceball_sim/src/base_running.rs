@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{player::Team, prelude::*};
+use crate::prelude::*;
 
 #[derive(Clone, PartialEq, Debug, TS)]
 #[ts(export)]
@@ -92,8 +92,6 @@ fn post_out_base_running(
     let mut runs_scored = 0u8;
     let mut has_thrown = false;
 
-    let first_runner = base_state[Consts::FIRST]
-        .map(|batter_index| batting_team.player_at_batting_index(batter_index));
     let second_runner = base_state[Consts::SECOND]
         .map(|batter_index| batting_team.player_at_batting_index(batter_index));
     let third_runner = base_state[Consts::THIRD]

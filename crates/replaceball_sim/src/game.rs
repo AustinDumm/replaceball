@@ -2,9 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{
-    inning::simulate_inning, player::Team, prelude::*
-};
+use crate::{inning::simulate_inning, prelude::*};
 
 #[derive(Debug, Clone, TS)]
 #[ts(export)]
@@ -12,6 +10,8 @@ use crate::{
 pub struct GameRecord {
     pub innings: Box<[(InningRecord, GameProgress)]>,
     pub outcome: GameOutcome,
+    pub away_team: Team,
+    pub home_team: Team,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -26,15 +26,8 @@ pub struct GameOutcome {
 
 pub type GameProgress = GameOutcome;
 
-
-pub fn simulate_game(
-    decider: &mut impl Decider
-) -> GameRecord {
-    simulate_game_with_teams(
-        decider,
-        &Default::default(),
-        &Default::default(),
-    )
+pub fn simulate_game(decider: &mut impl Decider) -> GameRecord {
+    simulate_game_with_teams(decider, &Default::default(), &Default::default())
 }
 
 pub fn simulate_game_with_teams(
@@ -66,12 +59,10 @@ pub fn simulate_game_with_teams(
         away_hits += inning.outcome.away.total_hits as u16;
         home_hits += inning.outcome.home.total_hits as u16;
 
-        away_batting_index = (away_batting_index +
-            inning.away.at_bats.len() as u8) %
-            Consts::PLAYERS_PER_LINEUP;
-        home_batting_index = (home_batting_index +
-            inning.home.at_bats.len() as u8) %
-            Consts::PLAYERS_PER_LINEUP;
+        away_batting_index =
+            (away_batting_index + inning.away.at_bats.len() as u8) % Consts::PLAYERS_PER_LINEUP;
+        home_batting_index =
+            (home_batting_index + inning.home.at_bats.len() as u8) % Consts::PLAYERS_PER_LINEUP;
 
         let progress = GameProgress {
             away_score,
@@ -95,12 +86,10 @@ pub fn simulate_game_with_teams(
         away_hits += inning.outcome.away.total_hits as u16;
         home_hits += inning.outcome.home.total_hits as u16;
 
-        away_batting_index = (away_batting_index +
-            inning.away.at_bats.len() as u8) %
-            Consts::PLAYERS_PER_LINEUP;
-        home_batting_index = (home_batting_index +
-            inning.home.at_bats.len() as u8) %
-            Consts::PLAYERS_PER_LINEUP;
+        away_batting_index =
+            (away_batting_index + inning.away.at_bats.len() as u8) % Consts::PLAYERS_PER_LINEUP;
+        home_batting_index =
+            (home_batting_index + inning.home.at_bats.len() as u8) % Consts::PLAYERS_PER_LINEUP;
         let progress = GameProgress {
             away_score,
             away_hits,
@@ -109,7 +98,7 @@ pub fn simulate_game_with_teams(
         };
         running_innings.push((inning, progress));
     }
-    
+
     GameRecord {
         innings: running_innings.into_boxed_slice(),
         outcome: GameOutcome {
@@ -118,6 +107,7 @@ pub fn simulate_game_with_teams(
             away_score,
             away_hits,
         },
+        away_team: away_team.clone(),
+        home_team: home_team.clone(),
     }
 }
-

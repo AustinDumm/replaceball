@@ -1,29 +1,23 @@
-use std::{
-    io::Write,
-    time::Duration, sync::mpsc::Sender,
-};
 use rand::prelude::*;
 use rand_distr::Normal;
+use std::{io::Write, sync::mpsc::Sender, time::Duration};
 
 use crossterm::event::{self, Event, KeyCode};
 use replaceball_sim::prelude::*;
 
-use display::{DisplayModel, AtBat, Score, EventRecord};
+use display::{AtBat, DisplayModel, EventRecord, Score};
 use ring_buffer::RingBuffer;
 
 mod display;
-mod ring_buffer;
 mod event_description;
+mod ring_buffer;
 
 fn main() -> std::io::Result<()> {
     let (mut sender, join_handle) = display::Display::start(std::io::stdout());
 
     loop {
         let game = replaceball_sim::simulate_game(&mut RandomDecider::new());
-        if let Err(e) = sim_game(
-            &game,
-            &mut sender
-        ) {
+        if let Err(e) = sim_game(&game, &mut sender) {
             write!(std::io::stderr(), "Error while displaying game: {}", e)?;
         }
 
@@ -39,7 +33,9 @@ fn main() -> std::io::Result<()> {
     }
 
     let close_send = sender.send(None);
-    let display_result = join_handle.join().expect("Failed to join to display thread");
+    let display_result = join_handle
+        .join()
+        .expect("Failed to join to display thread");
 
     match (close_send, display_result) {
         (Ok(_), Ok(_)) => Ok(()),
@@ -51,21 +47,21 @@ fn main() -> std::io::Result<()> {
 macro_rules! escapable_wait {
     ($wait_time:expr) => {
         if poll_esc($wait_time)? {
-            return Ok(())
+            return Ok(());
         }
-    }
+    };
 }
 
-fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel>>) -> std::io::Result<()> {
+fn sim_game(
+    record: &GameRecord,
+    display_sender: &mut Sender<Option<DisplayModel>>,
+) -> std::io::Result<()> {
     let mut away_score = 0u16;
     let mut home_score = 0u16;
     let mut game_display_model = DisplayModel {
         is_top: true,
         inning_index: 0,
-        score: Score {
-            home: 0,
-            away: 0,
-        },
+        score: Score { home: 0, away: 0 },
         at_bat: AtBat {
             strikes: 0,
             balls: 0,
@@ -84,17 +80,19 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
                 &mut game_display_model,
                 display_sender,
                 event_description::at_bat_start(&at_bat_record),
-                Duration::from_secs(2)
+                Duration::from_secs(2),
             )?;
-            
+
             for (pitch_record, at_bat_progress) in at_bat_record.pitches.iter() {
                 game_display_model.at_bat.strikes = at_bat_progress.strikes;
                 game_display_model.at_bat.balls = at_bat_progress.balls;
 
-                game_display_model.event_record.event_list.push_back(
-                    event_description::pitch(&pitch_record)
-                );
-                display_sender.send(Some(game_display_model.clone()))
+                game_display_model
+                    .event_record
+                    .event_list
+                    .push_back(event_description::pitch(&pitch_record));
+                display_sender
+                    .send(Some(game_display_model.clone()))
                     .expect("Failed to send model for pitch");
                 escapable_wait!(Duration::from_secs(2));
             }
@@ -102,9 +100,7 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
             update_event(
                 &mut game_display_model,
                 display_sender,
-                event_description::at_bat_outcome(
-                    &at_bat_record.outcome.outcome_type
-                ),
+                event_description::at_bat_outcome(&at_bat_record.outcome.outcome_type),
                 Duration::from_secs(2),
             )?;
 
@@ -113,25 +109,25 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
             game_display_model.score.away = away_score + inning_progress.score_change;
 
             match &at_bat_record.outcome.outcome_type {
-                AtBatOutcomeType::Hit(hit_record) => {
-                    match &hit_record.outcome {
-                        HitOutcome::HomeRun => {
-                            display_sender.send(Some(game_display_model.clone()))
-                                .expect("Failed to send model for between batters");
-                            escapable_wait!(Duration::from_secs(2));
-                                    },
-                        HitOutcome::InPlay(fielding_record) => {
-                            update_event(
-                                &mut game_display_model,
-                                display_sender,
-                                event_description::play_result(&fielding_record),
-                                Duration::from_secs(2),
-                            )?;
-                        }
+                AtBatOutcomeType::Hit(hit_record) => match &hit_record.outcome {
+                    HitOutcome::HomeRun => {
+                        display_sender
+                            .send(Some(game_display_model.clone()))
+                            .expect("Failed to send model for between batters");
+                        escapable_wait!(Duration::from_secs(2));
+                    }
+                    HitOutcome::InPlay(fielding_record) => {
+                        update_event(
+                            &mut game_display_model,
+                            display_sender,
+                            event_description::play_result(&fielding_record),
+                            Duration::from_secs(2),
+                        )?;
                     }
                 },
                 _ => {
-                    display_sender.send(Some(game_display_model.clone()))
+                    display_sender
+                        .send(Some(game_display_model.clone()))
                         .expect("Failed to send model for between batters");
                     escapable_wait!(Duration::from_secs(2));
                 }
@@ -139,11 +135,11 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
 
             game_display_model.at_bat.balls = 0;
             game_display_model.at_bat.strikes = 0;
-
         }
 
         away_score = game_display_model.score.away;
-        display_sender.send(Some(game_display_model.clone()))
+        display_sender
+            .send(Some(game_display_model.clone()))
             .expect("Failed to send model for between innings");
         escapable_wait!(Duration::from_secs(3));
         game_display_model.is_top = !game_display_model.is_top;
@@ -157,18 +153,20 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
                 &mut game_display_model,
                 display_sender,
                 event_description::at_bat_start(&at_bat_record),
-                Duration::from_secs(2)
+                Duration::from_secs(2),
             )?;
 
             for (pitch_record, at_bat_progress) in at_bat_record.pitches.iter() {
                 game_display_model.at_bat.strikes = at_bat_progress.strikes;
                 game_display_model.at_bat.balls = at_bat_progress.balls;
 
-                game_display_model.event_record.event_list.push_back(
-                    event_description::pitch(&pitch_record)
-                );
+                game_display_model
+                    .event_record
+                    .event_list
+                    .push_back(event_description::pitch(&pitch_record));
 
-                display_sender.send(Some(game_display_model.clone()))
+                display_sender
+                    .send(Some(game_display_model.clone()))
                     .expect("Failed to send model for pitch");
                 escapable_wait!(Duration::from_secs(2));
             }
@@ -176,9 +174,7 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
             update_event(
                 &mut game_display_model,
                 display_sender,
-                event_description::at_bat_outcome(
-                    &at_bat_record.outcome.outcome_type
-                ),
+                event_description::at_bat_outcome(&at_bat_record.outcome.outcome_type),
                 Duration::from_secs(2),
             )?;
 
@@ -187,25 +183,25 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
             game_display_model.score.home = home_score + inning_progress.score_change;
 
             match &at_bat_record.outcome.outcome_type {
-                AtBatOutcomeType::Hit(hit_record) => {
-                    match &hit_record.outcome {
-                        HitOutcome::HomeRun => {
-                            display_sender.send(Some(game_display_model.clone()))
-                                .expect("Failed to send model for between batters");
-                            escapable_wait!(Duration::from_secs(2));
-                                    },
-                        HitOutcome::InPlay(fielding_record) => {
-                            update_event(
-                                &mut game_display_model,
-                                display_sender,
-                                event_description::play_result(&fielding_record),
-                                Duration::from_secs(2),
-                            )?;
-                        }
+                AtBatOutcomeType::Hit(hit_record) => match &hit_record.outcome {
+                    HitOutcome::HomeRun => {
+                        display_sender
+                            .send(Some(game_display_model.clone()))
+                            .expect("Failed to send model for between batters");
+                        escapable_wait!(Duration::from_secs(2));
+                    }
+                    HitOutcome::InPlay(fielding_record) => {
+                        update_event(
+                            &mut game_display_model,
+                            display_sender,
+                            event_description::play_result(&fielding_record),
+                            Duration::from_secs(2),
+                        )?;
                     }
                 },
                 _ => {
-                    display_sender.send(Some(game_display_model.clone()))
+                    display_sender
+                        .send(Some(game_display_model.clone()))
                         .expect("Failed to send model for between batters");
                     escapable_wait!(Duration::from_secs(2));
                 }
@@ -216,7 +212,8 @@ fn sim_game(record: &GameRecord, display_sender: &mut Sender<Option<DisplayModel
         }
 
         home_score = game_display_model.score.home;
-        display_sender.send(Some(game_display_model.clone()))
+        display_sender
+            .send(Some(game_display_model.clone()))
             .expect("Failed to send model for between innings");
         escapable_wait!(Duration::from_secs(2));
         game_display_model.is_top = !game_display_model.is_top;
@@ -251,52 +248,55 @@ impl RandomDecider {
 }
 
 impl Decider for RandomDecider {
-    fn roll(
-        &mut self,
-        check: u64,
-        count: u64,
-        adjust: u64,
-    ) -> bool {
+    fn roll(&mut self, check: u64, count: u64, adjust: u64) -> bool {
         let probability = check + adjust;
         let roll = self.rand.gen_range(0..count);
 
         roll < probability
     }
 
-    fn roll_pitch_location(&mut self) -> PitchLocation {
-        let width = match self.rand.gen_range(0..3) {
+    fn roll_pitch_location(
+        &mut self,
+        pitch_height_bias: i8,
+        pitch_width_bias: i8,
+    ) -> PitchLocation {
+        let zone_count = 3;
+        let zone_size = -(std::i8::MIN as i16);
+        let full_range = zone_count * zone_size;
+
+        let width = match (self.rand.gen_range(0..full_range as u64)
+            .saturating_add_signed(pitch_width_bias as i64) as f32
+            / zone_size as f32) as u8
+        {
             0 => PitchWidth::Left,
             1 => PitchWidth::Center,
-            2 => PitchWidth::Right,
-            _ => unreachable!(),
+            2 | 3 => PitchWidth::Right,
+            i => unreachable!("Value: {}", i),
         };
 
-        let height = match self.rand.gen_range(0..3) {
+        let height = match (self.rand.gen_range(0..full_range as u64)
+            .saturating_add_signed(pitch_height_bias as i64) as f32
+            / zone_size as f32) as u8
+        {
             0 => PitchHeight::High,
             1 => PitchHeight::Middle,
-            2 => PitchHeight::Low,
-            _ => unreachable!(),
+            2 | 3 => PitchHeight::Low,
+            i => unreachable!("Value: {}", i),
         };
 
-        PitchLocation { width, height, }
+        PitchLocation { width, height }
     }
 
-    fn roll_index(
-        &mut self,
-        range: std::ops::Range<usize>,
-    ) -> usize {
+    fn roll_index(&mut self, range: std::ops::Range<usize>) -> usize {
         self.rand.gen_range(range)
     }
 
-    fn roll_stat(
-        &mut self,
-        stat: Stat,
-        skill: Skill
-    ) -> f64 {
+    fn roll_stat(&mut self, stat: Stat, skill: Skill) -> f64 {
         let distr = Normal::new(
-            stat.average * skill.average_multiplier,
+            stat.average * skill.average_multiplier + skill.average_shift,
             stat.std_dev * skill.std_dev_multiplier,
-        ).expect("Failed to create normal distribution");
+        )
+        .expect("Failed to create normal distribution");
 
         let sample = distr.sample(&mut self.rand);
 
@@ -309,17 +309,11 @@ impl Decider for RandomDecider {
         }
     }
 
-    fn flip(
-        &mut self,
-        probability: f64,
-    )-> bool {
-        self.rand.gen_range(0.0..1.0) < probability
+    fn flip(&mut self, probability: f64, bias: i8) -> bool {
+        (self.rand.gen_range(0.0..1.0) + (bias as f64 / std::i8::MAX as f64 / 4.0)) < probability
     }
 
-    fn roll_uniform(
-        &mut self,
-        range: std::ops::Range<f64>,
-    ) -> f64 {
+    fn roll_uniform(&mut self, range: std::ops::Range<f64>) -> f64 {
         self.rand.gen_range(range)
     }
 }
@@ -328,10 +322,12 @@ fn update_event(
     display_model: &mut DisplayModel,
     display_sender: &mut Sender<Option<DisplayModel>>,
     event: String,
-    delay: Duration
+    delay: Duration,
 ) -> std::io::Result<()> {
     _ = display_model.event_record.event_list.push_back(event);
-    display_sender.send(Some(display_model.clone())).expect("Failed to send model.");
+    display_sender
+        .send(Some(display_model.clone()))
+        .expect("Failed to send model.");
     escapable_wait!(delay);
 
     Ok(())

@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{at_bat::simulate_at_bat, player::Team, prelude::*};
+use crate::{at_bat::simulate_at_bat, prelude::*};
 
 #[derive(Clone, Debug, TS)]
 #[ts(export)]

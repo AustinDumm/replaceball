@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{half_inning::simulate_half_inning, player::Team, prelude::*};
+use crate::{half_inning::simulate_half_inning, prelude::*};
 
 #[derive(Clone, Debug, TS)]
 #[ts(export)]

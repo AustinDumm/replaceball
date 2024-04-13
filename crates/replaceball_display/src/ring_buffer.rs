@@ -28,6 +28,7 @@ impl<T> RingBuffer<T> {
 
     /// Adds elt to the front of the ring buffer. If the buffer is full, will
     /// pop the back element off and return it. Otherwise, returns None.
+    #[allow(dead_code)]
     pub fn push_front(&mut self, elt: T) -> Option<T> {
         self.buffer.push_front(elt);
 

@@ -4,6 +4,9 @@ use ts_rs::TS;
 
 use crate::Fielder;
 
+#[derive(Debug, Clone, TS)]
+#[ts(export)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Team {
     pub fielders: [Player; 9],
     pub batting_order: [Fielder; 9],

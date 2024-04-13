@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{fielding, player::Team, prelude::*};
+use crate::{fielding, prelude::*};
 
 #[derive(Clone, Copy, Debug, PartialEq, TS)]
 #[ts(export)]

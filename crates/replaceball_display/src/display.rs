@@ -53,6 +53,7 @@ pub struct Display<Out: Write + Send> {
     out: Out,
 }
 
+#[allow(dead_code)]
 struct Rect {
     width: u16,
     height: u16,

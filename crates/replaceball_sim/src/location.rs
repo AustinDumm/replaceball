@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, ops::{Add, Div, Mul, RangeInclusive, Sub}};
+use std::ops::{Add, Div, Mul, RangeInclusive, Sub};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

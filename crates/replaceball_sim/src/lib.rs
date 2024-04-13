@@ -134,6 +134,23 @@ struct Test {
 }
 
 #[wasm_bindgen]
+pub fn wasm_simulate_game_with_teams(
+    home_team: JsValue,
+    away_team: JsValue,
+) -> JsValue {
+    let home_team: Team = serde_wasm_bindgen::from_value(home_team).unwrap();
+    let away_team: Team = serde_wasm_bindgen::from_value(away_team).unwrap();
+
+    let game = simulate_game_with_teams(
+        &mut ExternalDecider::new(),
+        &home_team,
+        &away_team,
+    );
+
+    serde_wasm_bindgen::to_value(&game).unwrap()
+}
+
+#[wasm_bindgen]
 pub fn wasm_simulate_game() -> JsValue {
     let game = simulate_game(&mut ExternalDecider::new());
 

@@ -7,7 +7,7 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use ts_rs::TS;
 
-use crate::{base_running, player::Team, prelude::*};
+use crate::{base_running, prelude::*};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter, TS)]
 #[ts(export)]

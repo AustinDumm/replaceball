@@ -12,5 +12,7 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 
 [dependencies.replaceball_sim]
+version = "0.5.0"
+registry = "local-registry"
 path = "../replaceball_sim/"
 
